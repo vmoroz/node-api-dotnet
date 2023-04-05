@@ -13,4 +13,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.JavaScript.NodeApi" Version="0.1.*-*" PrivateAssets="all" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="hermes.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

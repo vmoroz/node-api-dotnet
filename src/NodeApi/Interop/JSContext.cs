@@ -97,7 +97,8 @@ public sealed class JSContext : IDisposable
 
         _env = env;
         SetInstanceData(env, this);
-        SynchronizationContext = new JSSynchronizationContext();
+        //SynchronizationContext = new JSSynchronizationContext();
+        SynchronizationContext = null!;
     }
 
     /// <summary>
@@ -603,7 +604,10 @@ public sealed class JSContext : IDisposable
         DisposeReferences(_classMap);
         DisposeReferences(_staticClassMap);
         DisposeReferences(_structMap);
-        SynchronizationContext.Dispose();
+        if (SynchronizationContext != null)
+        {
+            SynchronizationContext.Dispose();
+        }
 
         GC.SuppressFinalize(this);
     }
