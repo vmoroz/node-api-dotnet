@@ -21,7 +21,7 @@
   <PropertyGroup Label="Nuget metadata">
     <Authors>Microsoft</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Copyright>&copy; Microsoft Corporation. All rights reserved.</Copyright>
     <PackageProjectUrl>https://github.com/microsoft/node-api-dotnet</PackageProjectUrl>
     <Description>Node-API bindings for .Net</Description>
     <PackageTags>Node-API;NAPI;Node.JS;JavaScript</PackageTags>

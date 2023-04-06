@@ -12,11 +12,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.JavaScript.NodeApi" Version="0.1.*-*" PrivateAssets="all" />
+    <PackageReference Include="ReactNative.Hermes.Windows" Version="0.1.1" IncludeAssets="none" PrivateAssets="build;native;runtime" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="hermes.dll">
+    <None Include="$(PkgReactNative_Hermes_Windows)\lib\native\win32\x64\hermes.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
 </Project>
