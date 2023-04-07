@@ -27,8 +27,7 @@ public class JSThreadSafeFunction
         get
         {
             nint funcHandle = 0;
-            GetExport(ref funcHandle, "napi_create_threadsafe_function");
-            return funcHandle != 0;
+            return TryGetExport(ref funcHandle, "napi_create_threadsafe_function");
         }
     }
 
