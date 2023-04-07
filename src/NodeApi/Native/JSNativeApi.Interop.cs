@@ -1343,7 +1343,7 @@ public static partial class JSNativeApi
         internal static napi_status napi_object_seal(napi_env env, napi_value js_object)
             => CallInterop(ref s_fields.napi_object_seal, env, js_object.Handle);
 
-        private static nint GetExport(ref nint field, [CallerMemberName] string functionName = "")
+        internal static nint GetExport(ref nint field, [CallerMemberName] string functionName = "")
         {
             nint methodPtr = field;
             if (methodPtr == default)

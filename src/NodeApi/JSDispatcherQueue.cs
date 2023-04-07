@@ -3,45 +3,43 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using static Microsoft.JavaScript.NodeApi.JSPromise;
 
 namespace Hermes.Example;
 
-public delegate void TypedEventHandler<TSender, TResult>(TSender sender, TResult args);
+public delegate void JSTypedEventHandler<TSender, TResult>(TSender sender, TResult args);
 
-public sealed class DispatcherQueueShutdownStartingEventArgs
+public sealed class DispatcherQueueShutdownStartingEventArgs : EventArgs
 {
-    Func<Deferral> _getDeferral;
+    private Func<JSDispatcherQueueDeferral> _getDeferral;
 
-    internal DispatcherQueueShutdownStartingEventArgs(Func<Deferral> getDeferral)
+    internal DispatcherQueueShutdownStartingEventArgs(Func<JSDispatcherQueueDeferral> getDeferral)
         => _getDeferral = getDeferral;
 
-    public Deferral GetDeferral() => _getDeferral();
+    public JSDispatcherQueueDeferral GetDeferral() => _getDeferral();
 }
 
-public class DispatcherQueue
+public sealed class JSDispatcherQueue
 {
     private readonly object _queueMutex = new();
     private List<Action?> _writerQueue = new(); // Queue to add new items
     private List<Action?> _readerQueue = new(); // Queue to read items from
-    private TaskCompletionSource? _onShutdownCompleted;
+    private TaskCompletionSource<int>? _onShutdownCompleted;
     private int _threadId;
     private int _deferralCount;
     private bool _isShutdownCompleted;
 
     [ThreadStatic]
-    private static DispatcherQueue? s_currentQueue;
+    private static JSDispatcherQueue? s_currentQueue;
 
-    public event TypedEventHandler<DispatcherQueue, object?>? ShutdownCompleted;
-    public event TypedEventHandler<DispatcherQueue, DispatcherQueueShutdownStartingEventArgs>?
+    public event JSTypedEventHandler<JSDispatcherQueue, object?>? ShutdownCompleted;
+    public event JSTypedEventHandler<JSDispatcherQueue, DispatcherQueueShutdownStartingEventArgs>?
         ShutdownStarting;
 
     public bool HasThreadAccess => _threadId == Environment.CurrentManagedThreadId;
 
-    public static DispatcherQueue? GetForCurrentThread() => s_currentQueue;
+    public static JSDispatcherQueue? GetForCurrentThread() => s_currentQueue;
 
     public bool TryEnqueue(Action callback)
     {
@@ -57,28 +55,6 @@ public class DispatcherQueue
         }
 
         return true;
-    }
-
-    private struct CurrentQueueHolder : IDisposable
-    {
-        private readonly DispatcherQueue? _previousCurrentQueue;
-
-        public CurrentQueueHolder(DispatcherQueue queue)
-        {
-            _previousCurrentQueue = s_currentQueue;
-            s_currentQueue = queue;
-            queue._threadId = Environment.CurrentManagedThreadId;
-        }
-
-        public void Dispose()
-        {
-            if (s_currentQueue != null)
-            {
-                s_currentQueue._threadId = default;
-            }
-
-            s_currentQueue = _previousCurrentQueue;
-        }
     }
 
     // Run the thread function.
@@ -127,25 +103,25 @@ public class DispatcherQueue
 
         // Notify about the shutdown completion.
         ShutdownCompleted?.Invoke(this, null);
-        _onShutdownCompleted.SetResult();
+        _onShutdownCompleted.SetResult(0);
     }
 
     // Create new Deferral and increment deferral count.
-    internal Deferral CreateDeferral()
+    internal JSDispatcherQueueDeferral CreateDeferral()
     {
         lock (_queueMutex)
         {
             _deferralCount++;
         }
 
-        return new Deferral(() =>
+        return new JSDispatcherQueueDeferral(() =>
         {
             // Decrement deferral count upon deferral completion.
             TryEnqueue(() => _deferralCount--);
         });
     }
 
-    internal void Shutdown(TaskCompletionSource completion)
+    internal void Shutdown(TaskCompletionSource<int> completion)
     {
         // Try to start the shutdown process.
         bool isShutdownStarted = TryEnqueue(() =>
@@ -153,7 +129,7 @@ public class DispatcherQueue
             if (_onShutdownCompleted != null)
             {
                 // The shutdown is already started. Subscribe to its completion.
-                ShutdownCompleted += (_, _) => completion.SetResult();
+                ShutdownCompleted += (_, _) => completion.SetResult(0);
                 return;
             }
 
@@ -166,20 +142,42 @@ public class DispatcherQueue
         if (!isShutdownStarted)
         {
             // The shutdown was already completed.
-            completion.SetResult();
+            completion.SetResult(0);
+        }
+    }
+
+    private struct CurrentQueueHolder : IDisposable
+    {
+        private readonly JSDispatcherQueue? _previousCurrentQueue;
+
+        public CurrentQueueHolder(JSDispatcherQueue queue)
+        {
+            _previousCurrentQueue = s_currentQueue;
+            s_currentQueue = queue;
+            queue._threadId = Environment.CurrentManagedThreadId;
+        }
+
+        public void Dispose()
+        {
+            if (s_currentQueue != null)
+            {
+                s_currentQueue._threadId = default;
+            }
+
+            s_currentQueue = _previousCurrentQueue;
         }
     }
 }
 
 
-public class DispatcherQueueController
+public class JSDispatcherQueueController
 {
-    public DispatcherQueue DispatcherQueue { get; } = new();
+    public JSDispatcherQueue DispatcherQueue { get; } = new();
 
-    public static DispatcherQueueController CreateOnDedicatedThread()
+    public static JSDispatcherQueueController CreateOnDedicatedThread()
     {
-        var controller = new DispatcherQueueController();
-        DispatcherQueue queue = controller.DispatcherQueue;
+        var controller = new JSDispatcherQueueController();
+        JSDispatcherQueue queue = controller.DispatcherQueue;
         var thread = new Thread(() => queue.Run());
         thread.Start();
         return controller;
@@ -187,18 +185,24 @@ public class DispatcherQueueController
 
     public Task ShutdownQueueAsync()
     {
-        var completion = new TaskCompletionSource();
+        var completion = new TaskCompletionSource<int>();
         DispatcherQueue.Shutdown(completion);
         return completion.Task;
     }
 }
 
-public sealed class Deferral : IDisposable
+public sealed class JSDispatcherQueueDeferral : IDisposable
 {
     private bool _isDisposed;
     private Action _completionHandler;
 
-    public Deferral(Action completionHandler) => _completionHandler = completionHandler;
+    public JSDispatcherQueueDeferral(Action completionHandler)
+        => _completionHandler = completionHandler;
+
+    ~JSDispatcherQueueDeferral()
+    {
+        Dispose(false);
+    }
 
     public void Complete() => Dispose();
 
@@ -206,11 +210,6 @@ public sealed class Deferral : IDisposable
     {
         Dispose(true);
         GC.SuppressFinalize(this);
-    }
-
-    ~Deferral()
-    {
-        Dispose(false);
     }
 
     private void Dispose(bool _)
