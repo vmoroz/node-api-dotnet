@@ -54,6 +54,9 @@ public sealed class JSDispatcherQueue
         return true;
     }
 
+    public JSDispatcherQueueTimer CreateTimer()
+        => new JSDispatcherQueueTimer(this);
+
     // Run the thread function.
     internal void Run()
     {
@@ -190,6 +193,20 @@ public class JSDispatcherQueueController
         DispatcherQueue.Shutdown(completion);
         return completion.Task;
     }
+}
+
+public sealed class JSDispatcherQueueTimer {
+    public TimeSpan Interval { get; set; }
+    public bool IsRepeating { get; set; } = true;
+    public bool IsRunning { get; }
+
+    public event EventHandler? Tick;
+
+    public JSDispatcherQueueTimer(JSDispatcherQueue queue) { }
+
+    public void Stop() { }
+    public void Start() { }
+
 }
 
 internal sealed class JSDispatcherQueueDeferral : IDisposable
