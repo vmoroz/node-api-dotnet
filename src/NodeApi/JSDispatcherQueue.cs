@@ -21,8 +21,9 @@ public sealed class DispatcherQueueShutdownStartingEventArgs : EventArgs
 public sealed class JSDispatcherQueue
 {
     private readonly object _queueMutex = new();
-    private List<Action> _writerQueue = new(); // Queue to add new items
-    private List<Action> _readerQueue = new(); // Queue to read items from
+    private List<Action> _writerQueue = new(); // The queue to add new actions.
+    private List<Action> _readerQueue = new(); // The queue to read actions from.
+    private readonly List<JSDispatcherQueueTimer.Job> _timerJobs = new();
     private TaskCompletionSource<int>? _onShutdownCompleted;
     private int _threadId;
     private int _deferralCount;
@@ -42,15 +43,20 @@ public sealed class JSDispatcherQueue
     {
         lock (_queueMutex)
         {
-            if (_isShutdownCompleted)
-            {
-                return false;
-            }
+            return TryEnqueueInternal(callback);
+        }
+    }
 
-            _writerQueue.Add(callback);
-            Monitor.PulseAll(_queueMutex);
+    internal bool TryEnqueueInternal(Action callback)
+    {
+        ValidateLock();
+        if (_isShutdownCompleted)
+        {
+            return false;
         }
 
+        _writerQueue.Add(callback);
+        Monitor.PulseAll(_queueMutex);
         return true;
     }
 
@@ -78,8 +84,30 @@ public sealed class JSDispatcherQueue
             // Under lock see if we have more tasks, complete shutdown, or start waiting.
             lock (_queueMutex)
             {
-                // Swap reader and writer queues.
-                (_readerQueue, _writerQueue) = (_writerQueue, _readerQueue);
+                // See if must run timers
+                DateTime now = DateTime.Now;
+                TimeSpan waitTimeout = Timeout.InfiniteTimeSpan;
+                for (int i = _timerJobs.Count - 1; i >= 0; i--)
+                {
+                    JSDispatcherQueueTimer.Job timerJob = _timerJobs[i];
+                    if (now >= timerJob.TickTime)
+                    {
+                        _timerJobs.RemoveAt(i);
+                        _readerQueue.Add(timerJob.Invoke);
+                    }
+                    else
+                    {
+                        // The wait timeout for the next timer run activation.
+                        waitTimeout = timerJob.TickTime - now;
+                        break;
+                    }
+                }
+
+                if (_readerQueue.Count == 0)
+                {
+                    // Swap reader and writer queues.
+                    (_readerQueue, _writerQueue) = (_writerQueue, _readerQueue);
+                }
 
                 if (_readerQueue.Count > 0)
                 {
@@ -87,7 +115,7 @@ public sealed class JSDispatcherQueue
                     continue;
                 }
 
-                if (_onShutdownCompleted != null && _deferralCount == 0)
+                if (IsShutdownStarted && _deferralCount == 0)
                 {
                     // Complete the shutdown: the shutdown is already started,
                     // there are no deferrals, and all work is completed.
@@ -96,13 +124,13 @@ public sealed class JSDispatcherQueue
                 }
 
                 // Wait for more work to come.
-                Monitor.Wait(_queueMutex);
+                Monitor.Wait(_queueMutex, waitTimeout);
             }
         }
 
         // Notify about the shutdown completion.
         ShutdownCompleted?.Invoke(this, EventArgs.Empty);
-        _onShutdownCompleted.SetResult(0);
+        _onShutdownCompleted?.SetResult(0);
     }
 
     // Create new Deferral and increment deferral count.
@@ -126,28 +154,34 @@ public sealed class JSDispatcherQueue
         });
     }
 
+    internal bool IsShutdownStarted => _onShutdownCompleted != null;
+
     internal void Shutdown(TaskCompletionSource<int> completion)
     {
         // Try to start the shutdown process.
-        bool isShutdownStarted = TryEnqueue(() =>
+        bool isShutdownEnqueued = TryEnqueue(() =>
         {
-            if (_onShutdownCompleted != null)
+            if (IsShutdownStarted)
             {
                 // The shutdown is already started. Subscribe to its completion.
                 ShutdownCompleted += (_, _) => completion.SetResult(0);
                 return;
             }
 
-            // Start the shutdown process.
-            _onShutdownCompleted = completion;
-            ShutdownStarting?.Invoke(
-                this, new DispatcherQueueShutdownStartingEventArgs(() => CreateDeferral()));
+            StartShutdown();
         });
 
-        if (!isShutdownStarted)
+        if (!isShutdownEnqueued)
         {
             // The shutdown was already completed.
             completion.SetResult(0);
+        }
+
+        void StartShutdown()
+        {
+            _onShutdownCompleted = completion;
+            ShutdownStarting?.Invoke(
+                this, new DispatcherQueueShutdownStartingEventArgs(() => CreateDeferral()));
         }
     }
 
@@ -170,6 +204,53 @@ public sealed class JSDispatcherQueue
             }
 
             s_currentQueue = _previousCurrentQueue;
+        }
+    }
+
+    internal void AddTimerJob(JSDispatcherQueueTimer.Job timerJob)
+    {
+        ValidateNoLock();
+        if (timerJob.IsCancelled) return;
+
+        // See if we can invoke it immediately.
+        if (timerJob.TickTime <= DateTime.Now)
+        {
+            timerJob.Invoke();
+            return;
+        }
+
+        lock (_queueMutex)
+        {
+            // Schedule for future invocation.
+            int index = _timerJobs.BinarySearch(timerJob);
+            // If the index negative, then it is a bitwise complement of
+            // the suggested insertion index.
+            if (index < 0) index = ~index;
+            _timerJobs.Insert(index, timerJob);
+        }
+    }
+
+    internal void InvokeUnderLock(Action action)
+    {
+        lock (_queueMutex)
+        {
+            action();
+        }
+    }
+
+    internal void ValidateLock()
+    {
+        if (!Monitor.IsEntered(_queueMutex))
+        {
+            throw new InvalidOperationException("_queueMutex must be locked");
+        }
+    }
+
+    internal void ValidateNoLock()
+    {
+        if (Monitor.IsEntered(_queueMutex))
+        {
+            throw new InvalidOperationException("_queueMutex must not be locked");
         }
     }
 }
@@ -195,18 +276,127 @@ public class JSDispatcherQueueController
     }
 }
 
-public sealed class JSDispatcherQueueTimer {
-    public TimeSpan Interval { get; set; }
-    public bool IsRepeating { get; set; } = true;
-    public bool IsRunning { get; }
+public sealed class JSDispatcherQueueTimer
+{
+    private readonly JSDispatcherQueue _queue;
+    private TimeSpan _interval;
+    private bool _isRepeating = true;
+    private Job? _currentJob;
+
+    public TimeSpan Interval
+    {
+        get => _interval;
+        set
+        {
+            _queue.InvokeUnderLock(() =>
+            {
+                if (_interval == value) return;
+                _interval = value;
+                RestartInternal();
+            });
+        }
+    }
+
+    public bool IsRepeating
+    {
+        get => _isRepeating;
+        set
+        {
+            _queue.InvokeUnderLock(() =>
+            {
+                if (_isRepeating == value) return;
+                _isRepeating = value;
+                RestartInternal();
+            });
+        }
+    }
+
+    public bool IsRunning => _currentJob != null;
 
     public event EventHandler? Tick;
 
-    public JSDispatcherQueueTimer(JSDispatcherQueue queue) { }
+    public JSDispatcherQueueTimer(JSDispatcherQueue queue) => _queue = queue;
 
-    public void Stop() { }
-    public void Start() { }
+    public void Start() => _queue.InvokeUnderLock(StartInternal);
 
+    public void Stop() => _queue.InvokeUnderLock(StopInternal);
+
+    private void StartInternal()
+    {
+        _queue.ValidateLock();
+        if (_currentJob != null) return;
+        if (Tick == null) return;
+
+        var timerJob = new Job(this, DateTime.Now + Interval, Tick);
+        if (_queue.TryEnqueueInternal(() => _queue.AddTimerJob(timerJob)))
+        {
+            _currentJob = timerJob;
+        }
+    }
+
+    private void StopInternal()
+    {
+        _queue.ValidateLock();
+        if (_currentJob == null) return;
+
+        _currentJob.Cancel();
+        _currentJob = null;
+    }
+
+    private void RestartInternal()
+    {
+        if (_currentJob == null) return;
+        StopInternal();
+        StartInternal();
+    }
+
+    private void CompleteJob(Job job)
+    {
+        _queue.InvokeUnderLock(() =>
+        {
+            if (_currentJob == job)
+            {
+                _currentJob = null;
+            }
+
+            if (IsRepeating)
+            {
+                StartInternal();
+            }
+        });
+    }
+
+    internal class Job : IComparable<Job>
+    {
+        public JSDispatcherQueueTimer Timer { get; }
+        public DateTime TickTime { get; }
+        public EventHandler Tick { get; }
+        public bool IsCancelled { get; private set; }
+
+        public Job(JSDispatcherQueueTimer timer, DateTime tickTime, EventHandler tick)
+        {
+            Timer = timer;
+            TickTime = tickTime;
+            Tick = tick;
+        }
+
+        public int CompareTo(Job? other)
+        {
+            if (other == null) return 1;
+            // Sort in descending order where the timer runs with lower timer
+            // appear in the end of the list. It is to optimize deletion from the run list.
+            return -Comparer<DateTime>.Default.Compare(TickTime, other.TickTime);
+        }
+
+        public void Cancel() => IsCancelled = true;
+
+        public void Invoke()
+        {
+            if (IsCancelled) return;
+            Tick?.Invoke(Timer, EventArgs.Empty);
+            Timer.CompleteJob(this);
+        }
+    }
 }
 
 internal sealed class JSDispatcherQueueDeferral : IDisposable
