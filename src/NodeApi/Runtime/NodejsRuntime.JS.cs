@@ -474,7 +474,7 @@ public unsafe partial class NodejsRuntime
         sign = default;
         result = (nuint)words.Length;
         fixed (int* sign_ptr = &sign)
-        fixed (ulong* words_ptr = &words.GetPinnableReference())
+        fixed (ulong* words_ptr = words)
         fixed (nuint* result_ptr = &result)
         {
             return Import(ref napi_get_value_bigint_words)(

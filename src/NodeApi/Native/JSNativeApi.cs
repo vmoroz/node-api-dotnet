@@ -786,34 +786,6 @@ public static partial class JSNativeApi
         finalizerRef = new JSReference(reference, isWeak: true);
     }
 
-    public static long GetValueBigIntInt64(this JSValue thisValue, out bool isLossless)
-    {
-        thisValue.Runtime.GetValueBigInt64(
-            thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out long result, out bool lossless).ThrowIfFailed();
-        isLossless = lossless;
-        return result;
-    }
-
-    public static ulong GetValueBigIntUInt64(this JSValue thisValue, out bool isLossless)
-    {
-        thisValue.Runtime.GetValueBigInt64(
-            thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out ulong result, out bool lossless).ThrowIfFailed();
-        isLossless = lossless;
-        return result;
-    }
-
-    public static unsafe ulong[] GetValueBigIntWords(this JSValue thisValue, out int signBit)
-    {
-        thisValue.Runtime.GetValueBigInt(
-            thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out _, [], out nuint wordCount)
-                .ThrowIfFailed();
-        ulong[] words = new ulong[wordCount];
-        thisValue.Runtime.GetValueBigInt(
-            thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out signBit, words.AsSpan(), out _)
-                .ThrowIfFailed();
-        return words;
-    }
-
     public static JSValue GetAllPropertyNames(
         this JSValue thisValue,
         JSKeyCollectionMode mode,

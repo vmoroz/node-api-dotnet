@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Microsoft.JavaScript.NodeApi.Interop;
 using Microsoft.JavaScript.NodeApi.Runtime;
@@ -318,9 +319,57 @@ public readonly struct JSValue : IEquatable<JSValue>
         => CurrentRuntime.CreateBigInt(CurrentEnvironmentHandle, value, out napi_value result).ThrowIfFailed(result);
 
     public static JSValue CreateBigInt(int signBit, ReadOnlySpan<ulong> words)
+        => CurrentRuntime.CreateBigInt(CurrentEnvironmentHandle, signBit, words, out napi_value result).ThrowIfFailed(result);
+
+    public static unsafe JSValue CreateBigInt(BigInteger value)
     {
-        return CurrentRuntime.CreateBigInt(CurrentEnvironmentHandle, signBit, words, out napi_value result)
-            .ThrowIfFailed(result);
+        // .Net Framework 4.7.2 does not support Span-related methods for BigInteger.
+        int signBit = value.Sign;
+#if !NETFRAMEWORK
+        int byteCount = value.GetByteCount(isUnsigned: true);
+#else
+        byte[] bytes = (signBit >= 0) ? value.ToByteArray() : (-value).ToByteArray();
+        int byteCount = bytes.Length;
+#endif
+        int wordCount = (byteCount + sizeof(ulong) - 1) / sizeof(ulong);
+        Span<byte> byteSpan = stackalloc byte[wordCount * sizeof(ulong)];
+#if !NETFRAMEWORK
+        if (!value.TryWriteBytes(byteSpan, out int bytesWritten, isUnsigned: true))
+        {
+            throw new Exception("Cannot write BigInteger bytes");
+        }
+#endif
+        fixed (byte* bytePtr = byteSpan)
+        {
+#if NETFRAMEWORK
+            Marshal.Copy(bytes, 0, (nint)bytePtr, bytes.Length);
+#endif
+            ReadOnlySpan<ulong> words = new(bytePtr, wordCount);
+            return CreateBigInt(signBit, words);
+        }
+    }
+
+    public unsafe BigInteger ToBigInteger()
+    {
+        JSRuntime runtime = Runtime;
+        napi_env env = UncheckedEnvironmentHandle;
+        napi_value nValue = (napi_value)this;
+        runtime.GetValueBigInt(env, nValue, out _, new Span<ulong>(), out nuint wordCount)
+            .ThrowIfFailed();
+        Span<ulong> words = stackalloc ulong[(int)wordCount];
+        int byteCount = (int)wordCount * sizeof(ulong);
+        runtime.GetValueBigInt(env, nValue, out int signBit, words, out _).ThrowIfFailed();
+        fixed (ulong* wordPtr = words)
+        {
+#if !NETFRAMEWORK
+            BigInteger result = new(new ReadOnlySpan<byte>(wordPtr, byteCount), isUnsigned: true);
+#else
+            byte[] bytes = new byte[byteCount];
+            Marshal.Copy((nint)wordPtr, bytes, 0, byteCount);
+            BigInteger result = new(bytes);
+#endif
+            return signBit >= 0 ? result : -result;
+        }
     }
 
     public static implicit operator JSValue(bool value) => GetBoolean(value);
@@ -334,6 +383,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static implicit operator JSValue(ulong value) => CreateNumber(value);
     public static implicit operator JSValue(float value) => CreateNumber(value);
     public static implicit operator JSValue(double value) => CreateNumber(value);
+    public static implicit operator JSValue(BigInteger value) => CreateBigInt(value);
     public static implicit operator JSValue(bool? value) => ValueOrDefault(value, value => GetBoolean(value));
     public static implicit operator JSValue(sbyte? value) => ValueOrDefault(value, value => CreateNumber(value));
     public static implicit operator JSValue(byte? value) => ValueOrDefault(value, value => CreateNumber(value));
@@ -345,6 +395,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static implicit operator JSValue(ulong? value) => ValueOrDefault(value, value => CreateNumber(value));
     public static implicit operator JSValue(float? value) => ValueOrDefault(value, value => CreateNumber(value));
     public static implicit operator JSValue(double? value) => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(BigInteger? value) => ValueOrDefault(value, value => CreateBigInt(value));
     public static implicit operator JSValue(string value) => value == null ? default : CreateStringUtf16(value);
     public static implicit operator JSValue(char[] value) => value == null ? default : CreateStringUtf16(value);
     public static implicit operator JSValue(Span<char> value) => CreateStringUtf16(value);
@@ -364,6 +415,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator ulong(JSValue value) => (ulong)value.GetValueInt64();
     public static explicit operator float(JSValue value) => (float)value.GetValueDouble();
     public static explicit operator double(JSValue value) => value.GetValueDouble();
+    public static explicit operator BigInteger(JSValue value) => value.ToBigInteger();
     public static explicit operator string(JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16();
     public static explicit operator char[](JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16AsCharArray();
     public static explicit operator byte[](JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf8();
@@ -378,6 +430,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator ulong?(JSValue value) => ValueOrDefault(value, value => (ulong)value.GetValueInt64());
     public static explicit operator float?(JSValue value) => ValueOrDefault(value, value => (float)value.GetValueDouble());
     public static explicit operator double?(JSValue value) => ValueOrDefault(value, value => value.GetValueDouble());
+    public static explicit operator BigInteger?(JSValue value) => ValueOrDefault(value, value => value.ToBigInteger());
 
     private static JSValue ValueOrDefault<T>(T? value, Func<T, JSValue> convert) where T : struct
         => value.HasValue ? convert(value.Value) : default;
