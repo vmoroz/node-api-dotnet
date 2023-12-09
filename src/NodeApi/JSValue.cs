@@ -432,6 +432,9 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator double?(JSValue value) => ValueOrDefault(value, value => value.GetValueDouble());
     public static explicit operator BigInteger?(JSValue value) => ValueOrDefault(value, value => value.ToBigInteger());
 
+    public JSBigInt? AsJSBigInt()
+        => (this.TypeOf() == JSValueType.BigInt) ? JSBigInt.CreateUnchecked(this) : default;
+
     private static JSValue ValueOrDefault<T>(T? value, Func<T, JSValue> convert) where T : struct
         => value.HasValue ? convert(value.Value) : default;
 

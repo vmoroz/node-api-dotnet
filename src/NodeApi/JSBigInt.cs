@@ -9,9 +9,19 @@ using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public struct JSBigInt : IEquatable<JSBigInt>
+public partial struct JSBigInt : IEquatable<JSBigInt>
 {
     private readonly JSValue _value;
+
+    public static implicit operator JSValue(JSBigInt value) => value._value;
+    public static explicit operator JSBigInt?(JSValue value) => value.AsJSBigInt();
+    public static explicit operator JSBigInt(JSValue value)
+        => value.AsJSBigInt() is JSBigInt result
+            ? result
+            : throw new InvalidCastException("JSValue is not BigInt");
+
+    public static implicit operator JSBigInt(BigInteger value) => new(value);
+    public static explicit operator BigInteger(JSBigInt value) => value.ToBigInteger();
 
     private JSBigInt(JSValue value)
     {
@@ -34,6 +44,8 @@ public struct JSBigInt : IEquatable<JSBigInt>
     public JSBigInt(BigInteger value) : this(JSValue.CreateBigInt(value))
     {
     }
+
+    public static JSBigInt CreateUnchecked(JSValue value) => new JSBigInt(value);
 
     public JSValue AsJSValue() => _value;
 
