@@ -12,7 +12,7 @@ using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly struct JSValue : IEquatable<JSValue>
+public readonly ref struct JSValue
 {
     private readonly napi_value _handle = default;
     private readonly JSValueScope? _scope = null;
@@ -41,7 +41,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when either the handle or scope is null
-    /// (unless they are both null then this becomse an empty value that implicitly converts
+    /// (unless they are both null then this becomes an empty value that implicitly converts
     /// to <see cref="JSValue.Undefined"/>).</exception>
     /// <remarks>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
@@ -90,9 +90,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     public static implicit operator JSValue(napi_value handle) => new(handle);
-    public static implicit operator JSValue?(napi_value handle) => handle.Handle != default ? new(handle) : default;
     public static explicit operator napi_value(JSValue value) => value.Handle;
-    public static explicit operator napi_value(JSValue? value) => value?.Handle ?? default;
 
     /// <summary>
     /// Gets the environment handle for the value's scope without checking whether the scope
@@ -225,19 +223,19 @@ public readonly struct JSValue : IEquatable<JSValue>
         return func;
     }
 
-    public static JSValue CreateError(JSValue? code, JSValue message)
+    public static JSValue CreateError(JSValue code, JSValue message)
         => CurrentRuntime.CreateError(CurrentEnvironmentHandle, (napi_value)code, (napi_value)message,
             out napi_value result).ThrowIfFailed(result);
 
-    public static JSValue CreateTypeError(JSValue? code, JSValue message)
+    public static JSValue CreateTypeError(JSValue code, JSValue message)
         => CurrentRuntime.CreateTypeError(CurrentEnvironmentHandle, (napi_value)code, (napi_value)message,
             out napi_value result).ThrowIfFailed(result);
 
-    public static JSValue CreateRangeError(JSValue? code, JSValue message)
+    public static JSValue CreateRangeError(JSValue code, JSValue message)
         => CurrentRuntime.CreateRangeError(CurrentEnvironmentHandle, (napi_value)code, (napi_value)message,
             out napi_value result).ThrowIfFailed(result);
 
-    public static JSValue CreateSyntaxError(JSValue? code, JSValue message)
+    public static JSValue CreateSyntaxError(JSValue code, JSValue message)
         => CurrentRuntime.CreateSyntaxError(CurrentEnvironmentHandle, (napi_value)code, (napi_value)message,
             out napi_value result).ThrowIfFailed(result);
 
@@ -379,10 +377,13 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator float?(JSValue value) => ValueOrDefault(value, value => (float)value.GetValueDouble());
     public static explicit operator double?(JSValue value) => ValueOrDefault(value, value => value.GetValueDouble());
 
-    private static JSValue ValueOrDefault<T>(T? value, Func<T, JSValue> convert) where T : struct
+    private delegate JSValue CreateValueDelegate<T>(T value);
+    private delegate T GetValueDelegate<T>(JSValue value);
+
+    private static JSValue ValueOrDefault<T>(T? value, CreateValueDelegate<T> convert) where T : struct
         => value.HasValue ? convert(value.Value) : default;
 
-    private static T? ValueOrDefault<T>(JSValue value, Func<JSValue, T> convert) where T : struct
+    private static T? ValueOrDefault<T>(JSValue value, GetValueDelegate<T> convert) where T : struct
         => value.IsNullOrUndefined() ? default : convert(value);
 
     /// <summary>
@@ -412,7 +413,8 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        // JSValue cannot be boxed.
+        return false;
     }
 
     public override int GetHashCode()
