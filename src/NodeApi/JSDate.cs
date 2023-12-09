@@ -7,7 +7,7 @@ using Microsoft.JavaScript.NodeApi.Interop;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly struct JSDate : IEquatable<JSValue>
+public readonly ref struct JSDate
 {
     private readonly JSValue _value;
 
@@ -76,7 +76,7 @@ public readonly struct JSDate : IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
