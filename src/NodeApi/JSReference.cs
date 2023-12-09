@@ -128,7 +128,7 @@ public class JSReference : IDisposable
         }
     }
 
-    public JSValue? GetValue()
+    public JSValue GetValue()
     {
         JSValueScope.CurrentRuntime.GetReferenceValue(Env, _handle, out napi_value result)
             .ThrowIfFailed();

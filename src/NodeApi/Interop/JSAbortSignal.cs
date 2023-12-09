@@ -15,19 +15,19 @@ namespace Microsoft.JavaScript.NodeApi.Interop;
 /// https://nodejs.org/api/globals.html#class-abortsignal
 /// https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
 /// </remarks>
-public readonly struct JSAbortSignal : IEquatable<JSValue>
+public readonly struct JSAbortSignal //: IEquatable<JSValue>
 {
-    private readonly JSValue _value;
+    private readonly JSReference _value;
 
     public static explicit operator JSAbortSignal(JSValue value) => new(value);
-    public static implicit operator JSValue(JSAbortSignal promise) => promise._value;
+    public static implicit operator JSValue(JSAbortSignal signal) => signal._value.GetValue();
 
     public static explicit operator JSAbortSignal(JSObject obj) => (JSAbortSignal)(JSValue)obj;
-    public static implicit operator JSObject(JSAbortSignal promise) => (JSObject)promise._value;
+    public static implicit operator JSObject(JSAbortSignal signal) => (JSObject)signal._value.GetValue();
 
     private JSAbortSignal(JSValue value)
     {
-        _value = value;
+        _value = new JSReference(value);
     }
 
     public static explicit operator CancellationToken(JSAbortSignal signal)
@@ -40,18 +40,19 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
 
     private CancellationToken ToCancellationToken()
     {
-        if (!_value.IsObject())
+        JSValue value = _value.GetValue();
+        if (!value.IsObject())
         {
             return default;
         }
-        else if ((bool)_value.GetProperty("aborted"))
+        else if ((bool)value.GetProperty("aborted"))
         {
             return new CancellationToken(canceled: true);
         }
         else
         {
             CancellationTokenSource cancellationSource = new();
-            _value.CallMethod("addEventListener", "abort", JSValue.CreateFunction("abort", (args) =>
+            value.CallMethod("addEventListener", "abort", JSValue.CreateFunction("abort", (args) =>
             {
                 cancellationSource.Cancel();
                 return default;
@@ -90,7 +91,7 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
                 JSSynchronizationContext syncContext = JSSynchronizationContext.Current!;
                 cancellation.Register(() => syncContext.Post(() =>
                 {
-                    controllerReference.GetValue()!.Value.CallMethod("abort");
+                    controllerReference.GetValue().CallMethod("abort");
                     controllerReference.Dispose();
                 }));
                 return new JSAbortSignal(controller["signal"]);
@@ -106,21 +107,23 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
-    public static bool operator ==(JSAbortSignal a, JSAbortSignal b) => a._value.StrictEquals(b);
+    public static bool operator ==(JSAbortSignal a, JSAbortSignal b)
+        => a._value.GetValue().StrictEquals(b);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
-    public static bool operator !=(JSAbortSignal a, JSAbortSignal b) => !a._value.StrictEquals(b);
+    public static bool operator !=(JSAbortSignal a, JSAbortSignal b)
+        => !a._value.GetValue().StrictEquals(b);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
-    public bool Equals(JSValue other) => _value.StrictEquals(other);
+    public bool Equals(JSValue other) => _value.GetValue().StrictEquals(other);
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other);
     }
 
     public override int GetHashCode()
