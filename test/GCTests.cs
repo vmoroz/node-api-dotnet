@@ -42,7 +42,7 @@ public class GCTests
 
             // 5 GC handles are expected
             // - Type: DotnetClass
-            // - JSCallback: DotnetClass.constructor
+            // - JSCallbackFunc: DotnetClass.constructor
             // - JSPropertyDescriptor: DotnetClass.property
             // - JSPropertyDescriptor: DotnetClass.method
             // - JSPropertyDescriptor: DotnetClass.toString

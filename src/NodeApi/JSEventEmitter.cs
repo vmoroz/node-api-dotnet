@@ -79,7 +79,7 @@ public class JSEventEmitter : IDisposable
         }
     }
 
-    public void Once(string eventName, JSCallback listener)
+    public void Once(string eventName, JSCallbackFunc listener)
     {
         if (_nodeEmitter != null)
         {

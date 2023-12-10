@@ -42,7 +42,7 @@ public interface ITestObject
 public abstract class TestHelper
 {
     public static KeyValuePair<JSValue, JSValue> Method(
-        JSCallback callback,
+        JSCallbackFunc callback,
         [CallerArgumentExpression(nameof(callback))] string callbackName = "")
     {
         string name = callbackName ?? string.Empty;

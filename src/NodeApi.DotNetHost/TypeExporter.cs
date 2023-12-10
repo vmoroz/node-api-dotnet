@@ -234,8 +234,8 @@ internal class TypeExporter
             new[]
             {
                 typeof(string),
-                typeof(JSCallback),
-                typeof(JSCallback),
+                typeof(JSCallbackFunc),
+                typeof(JSCallbackFunc),
                 typeof(JSPropertyAttributes),
                 typeof(object),
             });
@@ -281,20 +281,20 @@ internal class TypeExporter
                     propertyAttributes |= JSPropertyAttributes.Writable;
                 }
 
-                JSCallback? getterDelegate = null;
+                JSCallbackFunc? getterDelegate = null;
                 if (property.GetMethod != null)
                 {
                     LambdaExpression lambda =
                         _marshaller.BuildFromJSPropertyGetExpression(property);
-                    getterDelegate = (JSCallback)lambda.Compile();
+                    getterDelegate = (JSCallbackFunc)lambda.Compile();
                 }
 
-                JSCallback? setterDelegate = null;
+                JSCallbackFunc? setterDelegate = null;
                 if (property.SetMethod != null)
                 {
                     LambdaExpression lambda =
                         _marshaller.BuildFromJSPropertySetExpression(property);
-                    setterDelegate = (JSCallback)lambda.Compile();
+                    setterDelegate = (JSCallbackFunc)lambda.Compile();
                 }
 
                 addPropertyMethod.Invoke(
@@ -319,7 +319,7 @@ internal class TypeExporter
             new[]
             {
                 typeof(string),
-                typeof(JSCallback),
+                typeof(JSCallbackFunc),
                 typeof(JSPropertyAttributes),
                 typeof(object),
             });
@@ -603,7 +603,7 @@ internal class TypeExporter
             new[]
             {
                 typeof(string),
-                typeof(JSCallback),
+                typeof(JSCallbackFunc),
                 typeof(JSPropertyAttributes),
                 typeof(object),
             });
@@ -612,7 +612,7 @@ internal class TypeExporter
             new object[]
             {
                 methods[0].Name + '$',
-                (JSCallback)MakeGenericMethod,
+                (JSCallbackFunc)MakeGenericMethod,
                 JSPropertyAttributes.Enumerable | JSPropertyAttributes.Configurable |
                     (methods[0].IsStatic ? JSPropertyAttributes.Static : default),
                 methods,

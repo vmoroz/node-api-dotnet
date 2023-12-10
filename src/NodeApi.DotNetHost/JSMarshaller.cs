@@ -330,7 +330,7 @@ public class JSMarshaller
     /// callback parameter for a <see cref="JSClassBuilder{T}"/>.
     /// </remarks>
 #pragma warning disable CA1822 // Mark members as static
-    public Expression<JSCallback> BuildFromJSConstructorExpression(ConstructorInfo constructor)
+    public Expression<JSCallbackFunc> BuildFromJSConstructorExpression(ConstructorInfo constructor)
     {
         if (constructor is null) throw new ArgumentNullException(nameof(constructor));
 
@@ -367,8 +367,8 @@ public class JSMarshaller
         statements.Add(Expression.Call(
             createExternalMethod, resultVariable));
 
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables, statements),
             name: "new_" + FullTypeName(constructor.DeclaringType!),
             parameters: s_argsArray);
@@ -385,10 +385,10 @@ public class JSMarshaller
     /// The returned expression takes a single <see cref="JSCallbackArgs"/> parameter and
     /// returns a <see cref="JSValue"/>. For instance methods, the `this` argument for the JS
     /// callback args must be a JS object that wraps a .NET object matching the method's
-    /// declaring type. The lambda expression may be converted to a <see cref="JSCallback"/>
+    /// declaring type. The lambda expression may be converted to a <see cref="JSCallbackFunc"/>
     /// delegate with <see cref="LambdaExpression.Compile()"/>.
     /// </remarks>
-    public Expression<JSCallback> BuildFromJSMethodExpression(MethodInfo method)
+    public Expression<JSCallbackFunc> BuildFromJSMethodExpression(MethodInfo method)
     {
         if (method is null) throw new ArgumentNullException(nameof(method));
         else if (method.IsGenericMethodDefinition) throw new ArgumentException(
@@ -415,10 +415,10 @@ public class JSMarshaller
     /// The returned expression takes a single <see cref="JSCallbackArgs"/> parameter and
     /// returns a <see cref="JSValue"/>. For instance methods, the `this` argument for the JS
     /// callback args must be a JS object that wraps a .NET object matching the property's
-    /// declaring type. The lambda expression may be converted to a <see cref="JSCallback"/>
+    /// declaring type. The lambda expression may be converted to a <see cref="JSCallbackFunc"/>
     /// delegate with <see cref="LambdaExpression.Compile()"/>.
     /// </remarks>
-    public Expression<JSCallback> BuildFromJSPropertyGetExpression(PropertyInfo property)
+    public Expression<JSCallbackFunc> BuildFromJSPropertyGetExpression(PropertyInfo property)
     {
         if (property is null) throw new ArgumentNullException(nameof(property));
 
@@ -445,10 +445,10 @@ public class JSMarshaller
     /// The returned expression takes a single <see cref="JSCallbackArgs"/> parameter and
     /// returns a <see cref="JSValue"/>. For instance methods, the `this` argument for the JS
     /// callback args must be a JS object that wraps a .NET object matching the property's
-    /// declaring type. The lambda expression may be converted to a <see cref="JSCallback"/>
+    /// declaring type. The lambda expression may be converted to a <see cref="JSCallbackFunc"/>
     /// delegate with <see cref="LambdaExpression.Compile()"/>.
     /// </remarks>
-    public Expression<JSCallback> BuildFromJSPropertySetExpression(PropertyInfo property)
+    public Expression<JSCallbackFunc> BuildFromJSPropertySetExpression(PropertyInfo property)
     {
         if (property is null) throw new ArgumentNullException(nameof(property));
 
@@ -951,10 +951,10 @@ public class JSMarshaller
         ParameterExpression valueParameter = Expression.Parameter(delegateType, "__value");
         MethodInfo createFunctionMethod = typeof(JSValue).GetStaticMethod(
             nameof(JSValue.CreateFunction),
-            new[] { typeof(string), typeof(JSCallback), typeof(object) });
+            new[] { typeof(string), typeof(JSCallbackFunc), typeof(object) });
 
         Expression lambdaExpression = Expression.Lambda(
-            typeof(JSCallback),
+            typeof(JSCallbackFunc),
             Expression.Invoke(methodExpression, valueParameter, s_argsParameter),
             s_argsArray);
 
@@ -1148,7 +1148,7 @@ public class JSMarshaller
                 typeof(JSCallbackOverload), Expression.Constant(constructors.Length)));
 
         ConstructorInfo overloadConstructor = typeof(JSCallbackOverload).GetInstanceConstructor(
-            new[] { typeof(Type[]), typeof(JSCallback) });
+            new[] { typeof(Type[]), typeof(JSCallbackFunc) });
 
         for (int i = 0; i < constructors.Length; i++)
         {
@@ -1199,7 +1199,7 @@ public class JSMarshaller
                     .Select((p) => p.DefaultValue)
                     .ToArray();
             }
-            JSCallback constructorDelegate =
+            JSCallbackFunc constructorDelegate =
                 BuildFromJSConstructorExpression(constructors[i]).Compile();
             overloads[i] = new JSCallbackOverload(parameterTypes, constructorDelegate);
         }
@@ -1236,7 +1236,7 @@ public class JSMarshaller
                 typeof(JSCallbackOverload), Expression.Constant(methods.Length)));
 
         ConstructorInfo overloadConstructor = typeof(JSCallbackOverload).GetInstanceConstructor(
-            new[] { typeof(Type[]), typeof(JSCallback) });
+            new[] { typeof(Type[]), typeof(JSCallbackFunc) });
 
         for (int i = 0; i < methods.Length; i++)
         {
@@ -1288,14 +1288,14 @@ public class JSMarshaller
                     .ToArray();
             }
 
-            JSCallback methodDelegate =
+            JSCallbackFunc methodDelegate =
                 BuildFromJSMethodExpression(methods[i]).Compile();
             overloads[i] = new JSCallbackOverload(parameterTypes, defaultValues, methodDelegate);
         }
         return JSCallbackOverload.CreateDescriptor(overloads);
     }
 
-    private Expression<JSCallback> BuildFromJSStaticMethodExpression(MethodInfo method)
+    private Expression<JSCallbackFunc> BuildFromJSStaticMethodExpression(MethodInfo method)
     {
         /*
          * JSValue MethodClass_MethodName(JSCallbackArgs __args)
@@ -1349,14 +1349,14 @@ public class JSMarshaller
             statements.Add(Expression.Default(typeof(JSValue)));
         }
 
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables.Concat(argVariables), statements),
             name: FullMethodName(method),
             parameters: s_argsArray);
     }
 
-    private Expression<JSCallback> BuildFromJSInstanceMethodExpression(MethodInfo method)
+    private Expression<JSCallbackFunc> BuildFromJSInstanceMethodExpression(MethodInfo method)
     {
         /*
          * JSValue MethodClass_MethodName(JSCallbackArgs __args)
@@ -1418,8 +1418,8 @@ public class JSMarshaller
             statements.Add(Expression.Label(returnTarget, Expression.Default(typeof(JSValue))));
         }
 
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables.Concat(argVariables), statements),
             name: FullMethodName(method),
             parameters: s_argsArray);
@@ -1482,7 +1482,7 @@ public class JSMarshaller
         }
     }
 
-    private Expression<JSCallback> BuildFromJSStaticPropertyGetExpression(PropertyInfo property)
+    private Expression<JSCallbackFunc> BuildFromJSStaticPropertyGetExpression(PropertyInfo property)
     {
         /*
          * JSValue get_PropertyClass_PropertyName(JSCallbackArgs __args)
@@ -1502,14 +1502,14 @@ public class JSMarshaller
             Expression.Assign(resultVariable, Expression.Property(null, property)),
             BuildResultExpression(resultVariable, property.PropertyType),
         };
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables, statements),
             name: FullMethodName(property.GetMethod!),
             parameters: s_argsArray);
     }
 
-    private Expression<JSCallback> BuildFromJSInstancePropertyGetExpression(PropertyInfo property)
+    private Expression<JSCallbackFunc> BuildFromJSInstancePropertyGetExpression(PropertyInfo property)
     {
         /*
          * JSValue get_PropertyClass_PropertyName(JSCallbackArgs __args)
@@ -1548,14 +1548,14 @@ public class JSMarshaller
         statements.Add(Expression.Label(returnTarget,
             BuildResultExpression(resultVariable, property.PropertyType)));
 
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables, statements),
             name: FullMethodName(property.GetMethod!),
             parameters: s_argsArray);
     }
 
-    private Expression<JSCallback> BuildFromJSStaticPropertySetExpression(PropertyInfo property)
+    private Expression<JSCallbackFunc> BuildFromJSStaticPropertySetExpression(PropertyInfo property)
     {
         /*
          * JSValue get_PropertyClass_PropertyName(JSCallbackArgs __args)
@@ -1575,14 +1575,14 @@ public class JSMarshaller
             Expression.Call(property.SetMethod!, valueVariable),
             Expression.Default(typeof(JSValue)),
         };
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables, statements),
             name: FullMethodName(property.SetMethod!),
             parameters: s_argsArray);
     }
 
-    private Expression<JSCallback> BuildFromJSInstancePropertySetExpression(PropertyInfo property)
+    private Expression<JSCallbackFunc> BuildFromJSInstancePropertySetExpression(PropertyInfo property)
     {
         /*
          * JSValue get_PropertyClass_PropertyName(JSCallbackArgs __args)
@@ -1625,8 +1625,8 @@ public class JSMarshaller
         statements.Add(setExpression);
         statements.Add(Expression.Label(returnTarget, Expression.Default(typeof(JSValue))));
 
-        return (Expression<JSCallback>)Expression.Lambda(
-            delegateType: typeof(JSCallback),
+        return (Expression<JSCallbackFunc>)Expression.Lambda(
+            delegateType: typeof(JSCallbackFunc),
             body: Expression.Block(typeof(JSValue), variables, statements),
             name: FullMethodName(property.SetMethod!),
             parameters: s_argsArray);

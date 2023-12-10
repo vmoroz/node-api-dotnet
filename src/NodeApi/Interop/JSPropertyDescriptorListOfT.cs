@@ -49,8 +49,8 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddProperty(
       string name,
-      JSCallback? getter,
-      JSCallback? setter,
+      JSCallbackFunc? getter,
+      JSCallbackFunc? setter,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty,
       object? data = null)
     {
@@ -147,7 +147,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddMethod(
       string name,
-      JSCallback callback,
+      JSCallbackFunc callback,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod,
       object? data = null)
     {
@@ -204,7 +204,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddMethod(
       string name,
-      Func<TObject, JSCallback> getCallback,
+      Func<TObject, JSCallbackFunc> getCallback,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod,
       object? data = null)
     {

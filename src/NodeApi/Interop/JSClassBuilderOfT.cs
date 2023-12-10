@@ -33,7 +33,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
     {
     }
 
-    public JSClassBuilder(string className, JSCallback constructorCallback)
+    public JSClassBuilder(string className, JSCallbackFunc constructorCallback)
         : this(className, new JSCallbackDescriptor(className, constructorCallback))
     {
     }

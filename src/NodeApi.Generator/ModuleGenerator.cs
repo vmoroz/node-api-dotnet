@@ -587,7 +587,7 @@ public class ModuleGenerator : SourceGenerator, ISourceGenerator
         exportName ??= ToCamelCase(method.Name);
 
         // An adapter method may be used to support marshalling arbitrary parameters,
-        // if the method does not match the `JSCallback` signature.
+        // if the method does not match the `JSCallbackFunc` signature.
         string attributes = "JSPropertyAttributes.DefaultMethod" +
             (method.IsStatic ? " | JSPropertyAttributes.Static" : string.Empty);
         if (method.IsGenericMethod)
@@ -596,7 +596,7 @@ public class ModuleGenerator : SourceGenerator, ISourceGenerator
         }
         else if (IsMethodCallbackAdapterRequired(method))
         {
-            Expression<JSCallback> adapter =
+            Expression<JSCallbackFunc> adapter =
                 _marshaller.BuildFromJSMethodExpression(method.AsMethodInfo());
             _callbackAdapters.Add(adapter.Name!, adapter);
             s += $".AddMethod(\"{exportName}\", {adapter.Name},\n\t{attributes})";
@@ -647,7 +647,7 @@ public class ModuleGenerator : SourceGenerator, ISourceGenerator
         }
         else if (property.Type.AsType() != typeof(JSValue))
         {
-            Expression<JSCallback> adapter =
+            Expression<JSCallbackFunc> adapter =
                 _marshaller.BuildFromJSMethodExpression(property.AsPropertyInfo().GetMethod!);
             _callbackAdapters.Add(adapter.Name!, adapter);
             s += $"getter: {adapter.Name},";
@@ -667,7 +667,7 @@ public class ModuleGenerator : SourceGenerator, ISourceGenerator
         }
         else if (property.Type.AsType() != typeof(JSValue))
         {
-            Expression<JSCallback> adapter =
+            Expression<JSCallbackFunc> adapter =
                 _marshaller.BuildFromJSMethodExpression(property.AsPropertyInfo().SetMethod!);
             _callbackAdapters.Add(adapter.Name!, adapter);
             s += $"setter: {adapter.Name},";

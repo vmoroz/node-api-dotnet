@@ -19,18 +19,18 @@ public readonly struct JSPropertyDescriptor
     public string? Name { get; }
     public JSValue? NameValue { get; }
 
-    public JSCallback? Method { get; }
-    public JSCallback? Getter { get; }
-    public JSCallback? Setter { get; }
+    public JSCallbackFunc? Method { get; }
+    public JSCallbackFunc? Getter { get; }
+    public JSCallbackFunc? Setter { get; }
     public JSValue? Value { get; }
     public JSPropertyAttributes Attributes { get; }
     public object? Data { get; }
 
     public JSPropertyDescriptor(
         string name,
-        JSCallback? method = null,
-        JSCallback? getter = null,
-        JSCallback? setter = null,
+        JSCallbackFunc? method = null,
+        JSCallbackFunc? getter = null,
+        JSCallbackFunc? setter = null,
         JSValue? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
@@ -48,9 +48,9 @@ public readonly struct JSPropertyDescriptor
 
     public JSPropertyDescriptor(
         JSValue name,
-        JSCallback? method = null,
-        JSCallback? getter = null,
-        JSCallback? setter = null,
+        JSCallbackFunc? method = null,
+        JSCallbackFunc? getter = null,
+        JSCallbackFunc? setter = null,
         JSValue? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
@@ -68,8 +68,8 @@ public readonly struct JSPropertyDescriptor
 
     public static JSPropertyDescriptor Accessor(
         string name,
-        JSCallback? getter = null,
-        JSCallback? setter = null,
+        JSCallbackFunc? getter = null,
+        JSCallbackFunc? setter = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {
@@ -92,7 +92,7 @@ public readonly struct JSPropertyDescriptor
 
     public static JSPropertyDescriptor Function(
         string name,
-        JSCallback method,
+        JSCallbackFunc method,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {

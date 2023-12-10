@@ -46,8 +46,8 @@ public class JSStructBuilder<T> where T : struct
     /// </summary>
     public JSStructBuilder<T> AddProperty(
         string name,
-        JSCallback? getter,
-        JSCallback? setter,
+        JSCallbackFunc? getter,
+        JSCallbackFunc? setter,
         JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty,
         object? data = null)
     {
@@ -80,7 +80,7 @@ public class JSStructBuilder<T> where T : struct
     /// </summary>
     public JSStructBuilder<T> AddMethod(
         string name,
-        JSCallback callback,
+        JSCallbackFunc callback,
         JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod,
         object? data = null)
     {
