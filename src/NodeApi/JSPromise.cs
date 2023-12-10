@@ -14,7 +14,7 @@ namespace Microsoft.JavaScript.NodeApi;
 /// Represents a JavaScript Promise object.
 /// </summary>
 /// <seealso cref="TaskExtensions"/>
-public readonly struct JSPromise : IEquatable<JSValue>
+public readonly ref struct JSPromise //: IEquatable<JSValue>
 {
     private readonly JSValue _value;
 
@@ -29,16 +29,16 @@ public readonly struct JSPromise : IEquatable<JSValue>
         _value = value;
     }
 
-    public delegate void ResolveCallback(Action<JSValue> resolve);
+    public delegate void ResolveCallback(JSCallbackAction1 resolve);
 
-    public delegate Task AsyncResolveCallback(Action<JSValue> resolve);
+    public delegate Task AsyncResolveCallback(JSCallbackAction1 resolve);
 
     public delegate void ResolveRejectCallback(
-        Action<JSValue> resolve,
+        JSCallbackAction1 resolve,
         Action<JSError> reject);
 
     public delegate Task AsyncResolveRejectCallback(
-        Action<JSValue> resolve,
+        JSCallbackAction1 resolve,
         Action<JSError> reject);
 
     /// <summary>
@@ -143,7 +143,7 @@ public readonly struct JSPromise : IEquatable<JSValue>
     /// Registers callbacks that are invoked when a promise is fulfilled and/or rejected,
     /// and returns a new chained promise.
     /// </summary>
-    public JSPromise Then(Action<JSValue>? fulfilled, Action<JSError>? rejected)
+    public JSPromise Then(JSCallbackAction1? fulfilled, Action<JSError>? rejected)
     {
         JSValue fulfilledFunction = fulfilled == null ? JSValue.Undefined :
             JSValue.CreateFunction(nameof(fulfilled), (args) =>
@@ -164,7 +164,7 @@ public readonly struct JSPromise : IEquatable<JSValue>
     /// Registers a callback that is invoked when a promise is rejected, and returns a new
     /// chained promise.
     /// </summary>
-    public JSPromise Catch(Action<JSValue> rejected)
+    public JSPromise Catch(JSCallbackAction1 rejected)
     {
         JSValue rejectedFunction = JSValue.CreateFunction(nameof(rejected), (args) =>
         {
@@ -212,36 +212,37 @@ public readonly struct JSPromise : IEquatable<JSValue>
         return (JSPromise)JSRuntimeContext.Current.Import(null, "Promise").CallMethod("reject", reason);
     }
 
-    public static JSPromise All(params JSPromise[] promises) => Select("all", promises);
+    //TODO: (vmoroz)
+    //public static JSPromise All(params JSPromise[] promises) => Select("all", promises);
 
-    public static JSPromise All(IEnumerable<JSPromise> promises) => Select("all", promises);
+    //public static JSPromise All(IEnumerable<JSPromise> promises) => Select("all", promises);
 
-    public static JSPromise All(JSArray promises) => Select("all", promises);
+    //public static JSPromise All(JSArray promises) => Select("all", promises);
 
-    public static JSPromise Any(params JSPromise[] promises) => Select("any", promises);
+    //public static JSPromise Any(params JSPromise[] promises) => Select("any", promises);
 
-    public static JSPromise Any(IEnumerable<JSPromise> promises) => Select("any", promises);
+    //public static JSPromise Any(IEnumerable<JSPromise> promises) => Select("any", promises);
 
-    public static JSPromise Any(JSArray promises) => Select("any", promises);
+    //public static JSPromise Any(JSArray promises) => Select("any", promises);
 
-    public static JSPromise Race(params JSPromise[] promises) => Select("race", promises);
+    //public static JSPromise Race(params JSPromise[] promises) => Select("race", promises);
 
-    public static JSPromise Race(IEnumerable<JSPromise> promises) => Select("race", promises);
+    //public static JSPromise Race(IEnumerable<JSPromise> promises) => Select("race", promises);
 
-    public static JSPromise Race(JSArray promises) => Select("race", promises);
+    //public static JSPromise Race(JSArray promises) => Select("race", promises);
 
-    private static JSPromise Select(string operation, IEnumerable<JSPromise> promises)
-    {
-        JSArray promiseArray = new();
-        foreach (JSPromise promise in promises) promiseArray.Add(promise);
-        return Select(operation, promiseArray);
-    }
+    //private static JSPromise Select(string operation, IEnumerable<JSPromise> promises)
+    //{
+    //    JSArray promiseArray = new();
+    //    foreach (JSPromise promise in promises) promiseArray.Add(promise);
+    //    return Select(operation, promiseArray);
+    //}
 
-    private static JSPromise Select(string operation, JSArray promiseArray)
-    {
-        return (JSPromise)JSRuntimeContext.Current.Import(null, "Promise")
-            .CallMethod(operation, promiseArray);
-    }
+    //private static JSPromise Select(string operation, JSArray promiseArray)
+    //{
+    //    return (JSPromise)JSRuntimeContext.Current.Import(null, "Promise")
+    //        .CallMethod(operation, promiseArray);
+    //}
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -260,7 +261,7 @@ public readonly struct JSPromise : IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
