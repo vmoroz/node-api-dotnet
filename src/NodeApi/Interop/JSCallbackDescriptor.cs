@@ -26,7 +26,7 @@ public readonly struct JSCallbackDescriptor
     /// <summary>
     /// Gets the callback that handles invocations from JavaScript.
     /// </summary>
-    public JSCallback Callback { get; }
+    public JSCallbackFunc Callback { get; }
 
     /// <summary>
     /// Gets the optional data object that will be passed to the callback via
@@ -34,23 +34,23 @@ public readonly struct JSCallbackDescriptor
     /// </summary>
     public object? Data { get; }
 
-    public JSCallbackDescriptor(JSCallback callback, object? data = null)
+    public JSCallbackDescriptor(JSCallbackFunc callback, object? data = null)
         : this(null, callback, data, JSValueScope.Current.ModuleContext)
     {
     }
 
-    public JSCallbackDescriptor(string? name, JSCallback callback, object? data = null)
+    public JSCallbackDescriptor(string? name, JSCallbackFunc callback, object? data = null)
         : this(name, callback, data, JSValueScope.Current.ModuleContext)
     {
     }
 
-    internal JSCallbackDescriptor(JSCallback callback, object? data, JSModuleContext? moduleContext)
+    internal JSCallbackDescriptor(JSCallbackFunc callback, object? data, JSModuleContext? moduleContext)
         : this(null, callback, data, moduleContext)
     {
     }
 
     internal JSCallbackDescriptor(
-        string? name, JSCallback callback, object? data, JSModuleContext? moduleContext)
+        string? name, JSCallbackFunc callback, object? data, JSModuleContext? moduleContext)
     {
         Name = name;
         Callback = callback ?? throw new ArgumentNullException(nameof(callback));
@@ -58,5 +58,5 @@ public readonly struct JSCallbackDescriptor
         ModuleContext = moduleContext;
     }
 
-    public static implicit operator JSCallbackDescriptor(JSCallback callback) => new(callback);
+    public static implicit operator JSCallbackDescriptor(JSCallbackFunc callback) => new(callback);
 }

@@ -209,7 +209,7 @@ public readonly ref struct JSValue
     }
 
     public static unsafe JSValue CreateFunction(
-        string? name, JSCallback callback, object? callbackData = null)
+        string? name, JSCallbackFunc callback, object? callbackData = null)
     {
         GCHandle descriptorHandle = JSRuntimeContext.Current.AllocGCHandle(
             new JSCallbackDescriptor(name, callback, callbackData));
