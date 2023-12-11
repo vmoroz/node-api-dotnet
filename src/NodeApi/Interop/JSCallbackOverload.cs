@@ -37,7 +37,7 @@ public readonly struct JSCallbackOverload
     /// </summary>
     /// <remarks>
     /// Defaults are always at the end of the list of parameters, so if a method has 2 default
-    /// parameters then this array length would be 2. Therfore, the indexes in this array are
+    /// parameters then this array length would be 2. Therefore, the indexes in this array are
     /// offset from the <see cref="ParameterTypes" /> array by the number of non-default parameters.
     /// </remarks>
     public object?[]? DefaultValues { get; }
