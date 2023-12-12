@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly partial struct JSAsyncIterable : IAsyncEnumerable<JSValue>, IEquatable<JSValue>
+public readonly ref partial struct JSAsyncIterable
 {
     private readonly JSValue _value;
 
@@ -28,10 +28,6 @@ public readonly partial struct JSAsyncIterable : IAsyncEnumerable<JSValue>, IEqu
     public Enumerator GetAsyncEnumerator(CancellationToken cancellationToken = default)
         => new(_value);
 #pragma warning restore IDE0060
-
-    IAsyncEnumerator<JSValue> IAsyncEnumerable<JSValue>.GetAsyncEnumerator(
-        CancellationToken cancellationToken)
-        => GetAsyncEnumerator(cancellationToken);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -52,7 +48,7 @@ public readonly partial struct JSAsyncIterable : IAsyncEnumerable<JSValue>, IEqu
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
