@@ -63,8 +63,8 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddProperty(
       string name,
-      Func<JSValue>? getter,
-      Action<JSValue>? setter,
+      JSCallbackFunc0? getter,
+      JSCallbackAction1? setter,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty)
     {
         return AddProperty(
@@ -81,35 +81,36 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// <summary>
     /// Adds a property with getter and/or setter callbacks obtained from the wrapped object.
     /// </summary>
-    public TDerived AddProperty(
-      string name,
-      Func<TObject, JSValue>? getter,
-      Action<TObject, JSValue>? setter,
-      JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty)
-    {
-        return AddProperty(
-          name,
-          getter == null ? null : args =>
-          {
-              return (_unwrap(args) is TObject obj) ? getter(obj) : JSValue.Undefined;
-          },
-          setter == null ? null : args =>
-          {
-              if (_unwrap(args) is TObject obj)
-              {
-                  setter(obj, args[0]);
-              }
-              return JSValue.Undefined;
-          },
-          attributes);
-    }
+    // TODO: (vmoroz) Uncomment when we have a way to pass the wrapped object to the getter and setter.
+    //public TDerived AddProperty(
+    //  string name,
+    //  Func<TObject, JSValue>? getter,
+    //  Action<TObject, JSValue>? setter,
+    //  JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty)
+    //{
+    //    return AddProperty(
+    //      name,
+    //      getter == null ? null : args =>
+    //      {
+    //          return (_unwrap(args) is TObject obj) ? getter(obj) : JSValue.Undefined;
+    //      },
+    //      setter == null ? null : args =>
+    //      {
+    //          if (_unwrap(args) is TObject obj)
+    //          {
+    //              setter(obj, args[0]);
+    //          }
+    //          return JSValue.Undefined;
+    //      },
+    //      attributes);
+    //}
 
     /// <summary>
     /// Adds a method with a void no-args callback.
     /// </summary>
     public TDerived AddMethod(
       string name,
-      Action callback,
+      JSCallbackAction0 callback,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod)
     {
         return AddMethod(
@@ -127,7 +128,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddMethod(
       string name,
-      JSActionCallback callback,
+      JSCallbackAction callback,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod,
       object? data = null)
     {
@@ -181,7 +182,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddMethod(
       string name,
-      Func<TObject, JSActionCallback> getCallback,
+      Func<TObject, JSCallbackAction> getCallback,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultMethod,
       object? data = null)
     {

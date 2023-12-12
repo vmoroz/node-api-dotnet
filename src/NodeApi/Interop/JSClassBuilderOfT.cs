@@ -57,7 +57,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
     /// specified, the constructor callback must also invoke the base class constructor.</param>
     /// <returns>The class object (constructor).</returns>
     /// <exception cref="InvalidOperationException">A constructor was not provided.</exception>
-    public JSValue DefineClass(JSValue? baseClass = null)
+    public JSValue DefineClass(JSValue baseClass)
     {
         if (_constructorDescriptor == null)
         {
@@ -79,7 +79,10 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
                     "Stream classes may not have instance properties.");
             }
 
-            baseClass ??= context.Import("node:stream", "Duplex");
+            if (baseClass.TypeOf() == JSValueType.Undefined)
+            {
+                baseClass = context.Import("node:stream", "Duplex");
+            }
             classObject = NodeStream.DefineStreamClass(
                 ClassName,
                 _constructorDescriptor.Value,
@@ -114,14 +117,14 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
         // to APIs that require a Type.
         classObject.Wrap(typeof(T));
 
-        if (baseClass != null && !baseClass.Value.IsUndefined())
+        if (baseClass.TypeOf() != JSValueType.Undefined)
         {
             JSValue setPrototypeFunction =
                 JSRuntimeContext.Current.Import(null, "Object").GetProperty("setPrototypeOf");
             setPrototypeFunction.Call(
                 thisArg: JSValue.Undefined,
                 classObject.GetProperty("prototype"),
-                baseClass.Value.GetProperty("prototype"));
+                baseClass.GetProperty("prototype"));
         }
 
         return context.RegisterClass<T>(classObject);
