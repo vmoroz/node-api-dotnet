@@ -6,10 +6,11 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly struct JSSymbol : IEquatable<JSValue>
+public readonly ref struct JSSymbol
 {
     private readonly JSValue _value;
 
+    // TODO: (vmoroz) This is a bug: we must not store references as static variables.
     private static readonly Lazy<JSReference> s_iteratorSymbol =
         new(() => new JSReference(JSValue.Global["Symbol"]["iterator"]));
     private static readonly Lazy<JSReference> s_asyncIteratorSymbol =
@@ -56,12 +57,10 @@ public readonly struct JSSymbol : IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
-    {
-        throw new NotSupportedException(
+        => throw new NotSupportedException(
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
-    }
 }
