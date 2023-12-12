@@ -2,14 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Microsoft.JavaScript.NodeApi.Interop;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
+public readonly ref partial struct JSSet
 {
     private readonly JSValue _value;
 
@@ -46,13 +44,7 @@ public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
 
     public int Count => (int)_value["size"];
 
-    bool ICollection<JSValue>.IsReadOnly => false;
-
     public JSIterable.Enumerator GetEnumerator() => new(_value);
-
-    IEnumerator<JSValue> IEnumerable<JSValue>.GetEnumerator() => GetEnumerator();
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
     public bool Add(JSValue item)
     {
@@ -61,122 +53,11 @@ public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
         return Count > countBeforeAdd;
     }
 
-    void ICollection<JSValue>.Add(JSValue item)
-    {
-        _value.CallMethod("add", item);
-    }
-
     public bool Remove(JSValue item) => (bool)_value.CallMethod("delete", item);
 
     public void Clear() => _value.CallMethod("clear");
 
     public bool Contains(JSValue item) => (bool)_value.CallMethod("has", item);
-
-    public void CopyTo(JSValue[] array, int arrayIndex)
-    {
-        int i = arrayIndex;
-        foreach (JSValue item in this)
-        {
-            array[i++] = item;
-        }
-    }
-
-    public void ExceptWith(IEnumerable<JSValue> other)
-    {
-        foreach (JSValue item in other)
-        {
-            Remove(item);
-        }
-    }
-
-    public void IntersectWith(IEnumerable<JSValue> other)
-    {
-        List<JSValue> itemsToRemove = new();
-        foreach (JSValue item in this)
-        {
-            if (!other.Contains(item))
-            {
-                itemsToRemove.Add(item);
-            }
-        }
-
-        foreach (JSValue item in itemsToRemove)
-        {
-            Remove(item);
-        }
-    }
-
-    public bool IsProperSubsetOf(IEnumerable<JSValue> other)
-    {
-        JSSet thisSet = this; // Required for anonymous lambda.
-        return IsSubsetOf(other) && other.Any((item) => !thisSet.Contains(item));
-    }
-
-    public bool IsProperSupersetOf(IEnumerable<JSValue> other)
-    {
-        if (!IsSupersetOf(other))
-        {
-            return false;
-        }
-
-        // Not using this.Any() to avoid boxing.
-        foreach (JSValue item in this)
-        {
-            if (!other.Contains(item))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public bool IsSubsetOf(IEnumerable<JSValue> other)
-    {
-        // Not using this.All() to avoid boxing.
-        foreach (JSValue item in this)
-        {
-            if (!other.Contains(item))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public bool IsSupersetOf(IEnumerable<JSValue> other)
-    {
-        JSSet thisSet = this; // Required for anonymous lambda.
-        return other.All((item) => thisSet.Contains(item));
-    }
-
-    public bool Overlaps(IEnumerable<JSValue> other)
-    {
-        JSSet thisSet = this; // Required for anonymous lambda.
-        return other.Any((item) => thisSet.Contains(item));
-    }
-
-    public bool SetEquals(IEnumerable<JSValue> other)
-        => IsSubsetOf(other) && IsSupersetOf(other);
-
-    public void SymmetricExceptWith(IEnumerable<JSValue> other)
-    {
-        foreach (JSValue item in other)
-        {
-            if (!Remove(item))
-            {
-                Add(item);
-            }
-        }
-    }
-
-    public void UnionWith(IEnumerable<JSValue> other)
-    {
-        foreach (JSValue item in other)
-        {
-            _value.CallMethod("add", item);
-        }
-    }
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -195,7 +76,7 @@ public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
