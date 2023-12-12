@@ -2,25 +2,22 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public partial struct JSMap
+public ref partial struct JSMap
 {
-    public struct Enumerator :
-        IEnumerator<KeyValuePair<JSValue, JSValue>>,
-        System.Collections.IEnumerator
+    public ref struct Enumerator
     {
         private readonly JSValue _iterable;
         private JSValue _iterator;
-        private KeyValuePair<JSValue, JSValue>? _current;
+        private JSValueKeyValuePair _current;
+        private bool _hasCurrent;
 
         internal Enumerator(JSValue iterable)
         {
             _iterable = iterable;
             _iterator = _iterable.CallMethod(JSSymbol.Iterator);
-            _current = default;
         }
 
         public bool MoveNext()
@@ -30,29 +27,19 @@ public partial struct JSMap
             if (done.IsBoolean() && (bool)done)
             {
                 _current = default;
+                _hasCurrent = false;
                 return false;
             }
             else
             {
                 JSArray currentEntry = (JSArray)nextResult["value"];
-                _current = new KeyValuePair<JSValue, JSValue>(currentEntry[0], currentEntry[1]);
+                _current = new JSValueKeyValuePair(currentEntry[0], currentEntry[1]);
+                _hasCurrent = true;
                 return true;
             }
         }
 
-        public readonly KeyValuePair<JSValue, JSValue> Current
-            => _current ?? throw new InvalidOperationException("Unexpected enumerator state");
-
-        readonly object? System.Collections.IEnumerator.Current => Current;
-
-        void System.Collections.IEnumerator.Reset()
-        {
-            _iterator = _iterable.CallMethod(JSSymbol.Iterator);
-            _current = default;
-        }
-
-        readonly void IDisposable.Dispose()
-        {
-        }
+        public readonly JSValueKeyValuePair Current
+            => _hasCurrent ? _current : throw new InvalidOperationException("Unexpected enumerator state");
     }
 }

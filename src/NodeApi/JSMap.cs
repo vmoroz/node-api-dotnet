@@ -8,7 +8,7 @@ using Microsoft.JavaScript.NodeApi.Interop;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable<JSValue>
+public readonly ref partial struct JSMap
 {
     private readonly JSValue _value;
 
@@ -44,10 +44,6 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
 
     public Enumerator GetEnumerator() => new(_value);
 
-    IEnumerator<KeyValuePair<JSValue, JSValue>> IEnumerable<KeyValuePair<JSValue, JSValue>>.GetEnumerator() => GetEnumerator();
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-
     public JSValue this[JSValue key]
     {
         get
@@ -71,9 +67,9 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
         return !value.IsUndefined();
     }
 
-    public JSMap.Collection Keys => new((JSIterable)_value["keys"], GetCount);
+    public JSMap.Collection Keys => new((JSIterable)_value["keys"], this);
 
-    public JSMap.Collection Values => new((JSIterable)_value["values"], GetCount);
+    public JSMap.Collection Values => new((JSIterable)_value["values"], this);
 
     private int GetCount() => Count;
 
@@ -84,31 +80,6 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
     public bool Remove(JSValue key) => (bool)_value.CallMethod("delete", key);
 
     public void Clear() => _value.CallMethod("clear");
-
-    ICollection<JSValue> IDictionary<JSValue, JSValue>.Keys => Keys;
-
-    ICollection<JSValue> IDictionary<JSValue, JSValue>.Values => Values;
-
-    bool ICollection<KeyValuePair<JSValue, JSValue>>.IsReadOnly => false;
-
-    void ICollection<KeyValuePair<JSValue, JSValue>>.Add(KeyValuePair<JSValue, JSValue> item)
-        => Add(item.Key, item.Value);
-
-    bool ICollection<KeyValuePair<JSValue, JSValue>>.Contains(KeyValuePair<JSValue, JSValue> item)
-        => TryGetValue(item.Key, out JSValue value) && item.Value.Equals(value);
-
-    void ICollection<KeyValuePair<JSValue, JSValue>>.CopyTo(
-        KeyValuePair<JSValue, JSValue>[] array, int arrayIndex)
-    {
-        int i = arrayIndex;
-        foreach (KeyValuePair<JSValue, JSValue> pair in this)
-        {
-            array[i++] = pair;
-        }
-    }
-
-    bool ICollection<KeyValuePair<JSValue, JSValue>>.Remove(KeyValuePair<JSValue, JSValue> item)
-        => TryGetValue(item.Key, out JSValue value) && item.Value.Equals(value) && Remove(item.Key);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -127,7 +98,7 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()
@@ -136,35 +107,24 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
     }
 
-    public readonly struct Collection : ICollection<JSValue>, IReadOnlyCollection<JSValue>
+    public readonly ref struct Collection
     {
         private readonly JSIterable _iterable;
-        private readonly Func<int> _getCount;
+        private readonly JSMap _map;
 
-        internal Collection(JSIterable iterable, Func<int> getCount)
+        internal Collection(JSIterable iterable, JSMap map)
         {
             _iterable = iterable;
-            _getCount = getCount;
+            _map = map;
         }
 
-        public int Count => _getCount();
+        public int Count => _map.Count;
 
         public bool IsReadOnly => true;
 
-        public IEnumerator<JSValue> GetEnumerator() => _iterable.GetEnumerator();
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-            => GetEnumerator();
+        public JSIterable.Enumerator GetEnumerator() => _iterable.GetEnumerator();
 
         public bool Contains(JSValue item) => throw new NotImplementedException();
-
-        public void CopyTo(JSValue[] array, int arrayIndex)
-        {
-            int i = arrayIndex;
-            foreach (JSValue item in this)
-            {
-                array[i++] = item;
-            }
-        }
 
         public void Add(JSValue item) => throw new NotSupportedException();
         public bool Remove(JSValue item) => throw new NotSupportedException();
