@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace Microsoft.JavaScript.NodeApi.Interop;
 
+// TODO: (vmoroz) Fix
+#if false
 public static class JSCollectionExtensions
 {
     /// <summary>
@@ -646,3 +648,4 @@ internal class JSMapDictionary<TKey, TValue> :
         => TryGetValue(item.Key, out TValue? value) &&
             (item.Value?.Equals(value) ?? value == null) && Remove(item.Key);
 }
+#endif
