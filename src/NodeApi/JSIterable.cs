@@ -2,13 +2,11 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly partial struct JSIterable : IEnumerable<JSValue>, IEquatable<JSValue>
+public readonly ref partial struct JSIterable
 {
     private readonly JSValue _value;
 
@@ -28,10 +26,6 @@ public readonly partial struct JSIterable : IEnumerable<JSValue>, IEquatable<JSV
 
     public Enumerator GetEnumerator() => new(_value);
 
-    IEnumerator<JSValue> IEnumerable<JSValue>.GetEnumerator() => GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
@@ -49,7 +43,7 @@ public readonly partial struct JSIterable : IEnumerable<JSValue>, IEquatable<JSV
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()

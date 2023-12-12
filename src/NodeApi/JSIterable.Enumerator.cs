@@ -2,24 +2,22 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public partial struct JSIterable
+public ref partial struct JSIterable
 {
-    public struct Enumerator : IEnumerator<JSValue>, IEnumerator
+    public ref struct Enumerator
     {
         private readonly JSValue _iterable;
         private JSValue _iterator;
-        private JSValue? _current;
+        private JSValue _current = default;
+        private bool _hasCurrent = false;
 
         internal Enumerator(JSValue iterable)
         {
             _iterable = iterable;
             _iterator = _iterable.CallMethod(JSSymbol.Iterator);
-            _current = default;
         }
 
         public bool MoveNext()
@@ -29,29 +27,19 @@ public partial struct JSIterable
             if (done.IsBoolean() && (bool)done)
             {
                 _current = default;
+                _hasCurrent = false;
                 return false;
             }
             else
             {
                 _current = nextResult["value"];
+                _hasCurrent = true;
                 return true;
             }
         }
 
         public readonly JSValue Current
-            => _current ?? throw new InvalidOperationException("Unexpected enumerator state");
-
-        readonly object? IEnumerator.Current => Current;
-
-        void IEnumerator.Reset()
-        {
-            _iterator = _iterable.CallMethod(JSSymbol.Iterator);
-            _current = default;
-        }
-
-        readonly void IDisposable.Dispose()
-        {
-        }
+            => _hasCurrent ? _current : throw new InvalidOperationException("Unexpected enumerator state");
     }
 }
 
