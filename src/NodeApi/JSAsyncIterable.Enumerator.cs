@@ -10,24 +10,29 @@ namespace Microsoft.JavaScript.NodeApi;
 
 public partial struct JSAsyncIterable
 {
-    public struct Enumerator : IAsyncEnumerator<JSValue>
+    public struct Enumerator : IAsyncEnumerator<JSReference>
     {
-        private readonly JSValue _iterable;
-        private readonly JSValue _iterator;
-        private JSValue? _current;
+        private readonly JSReference _iterable;
+        private readonly JSReference _iterator;
+        private JSReference? _current;
 
         internal Enumerator(JSValue iterable)
         {
-            _iterable = iterable;
-            _iterator = _iterable.CallMethod(JSSymbol.AsyncIterator);
+            _iterable = new JSReference(iterable);
+            _iterator = new JSReference(iterable.CallMethod(JSSymbol.AsyncIterator));
             _current = default;
         }
 
         public async ValueTask<bool> MoveNextAsync()
         {
-            var nextPromise = (JSPromise)_iterator.CallMethod("next");
-            JSValue nextResult = await nextPromise.AsTask();
-            JSValue done = nextResult["done"];
+            var nextPromise = new JSReference(_iterator.GetValue().CallMethod("next"));
+            JSReference nextResult = await ((JSPromise)nextPromise.GetValue()).AsTask();
+            return MoveNextAsyncCore(nextResult);
+        }
+
+        private bool MoveNextAsyncCore(JSReference nextResult)
+        {
+            JSValue done = nextResult.GetValue()["done"];
             if (done.IsBoolean() && (bool)done)
             {
                 _current = default;
@@ -35,12 +40,12 @@ public partial struct JSAsyncIterable
             }
             else
             {
-                _current = nextResult["value"];
+                _current = new JSReference(nextResult.GetValue()["value"]);
                 return true;
             }
         }
 
-        public readonly JSValue Current
+        public readonly JSReference Current
             => _current ?? throw new InvalidOperationException("Unexpected enumerator state");
 
         readonly ValueTask IAsyncDisposable.DisposeAsync() => default;

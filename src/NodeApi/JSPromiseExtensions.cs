@@ -10,7 +10,7 @@ namespace Microsoft.JavaScript.NodeApi;
 /// </summary>
 public static class TaskExtensions
 {
-    public static Task<JSValue> AsTask(this JSPromise promise)
+    public static Task<JSReference> AsTask(this JSPromise promise)
     {
         TaskCompletionSource<JSValue> completion = new();
         promise.Then(

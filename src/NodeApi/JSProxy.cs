@@ -12,7 +12,7 @@ namespace Microsoft.JavaScript.NodeApi;
 /// <summary>
 /// Enables creation of JS Proxy objects with C# handler callbacks.
 /// </summary>
-public readonly partial struct JSProxy : IEquatable<JSValue>
+public readonly ref partial struct JSProxy
 {
     private readonly JSValue _value;
     private readonly JSValue _revoke = default;
@@ -284,7 +284,7 @@ public readonly partial struct JSProxy : IEquatable<JSValue>
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        return obj is JSValue other && Equals(other);
+        return obj is JSReference other && Equals(other.GetValue());
     }
 
     public override int GetHashCode()

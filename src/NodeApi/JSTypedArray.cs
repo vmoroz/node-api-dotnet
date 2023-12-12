@@ -83,7 +83,7 @@ public readonly struct JSTypedArray<T> : IEquatable<JSValue> where T : struct
 
     /// <summary>
     /// Creates a typed-array over read-memory, without copying. Only valid for memory
-    /// which was previously marshalled from a JS typed-array to .NET.
+    /// which was previously marshaled from a JS typed-array to .NET.
     /// </summary>
     /// <exception cref="NotSupportedException">The memory is external to JS.</exception>
     public unsafe JSTypedArray(ReadOnlyMemory<T> data)
@@ -241,7 +241,7 @@ public readonly struct JSTypedArray<T> : IEquatable<JSValue> where T : struct
         public override unsafe MemoryHandle Pin(int elementIndex = 0)
         {
             // Do TypedArray or ArrayBuffer support pinning?
-            // This code assumes the memory buffer is not moveable.
+            // This code assumes the memory buffer is not movable.
             Span<T> span = GetSpan().Slice(elementIndex);
             void* pointer = Unsafe.AsPointer(ref MemoryMarshal.GetReference(span));
             return new MemoryHandle(pointer, handle: default, pinnable: this);
