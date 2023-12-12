@@ -2,20 +2,18 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public partial struct JSObject
+public ref partial struct JSObject
 {
-    public struct Enumerator : IEnumerator<KeyValuePair<JSValue, JSValue>>
+    public ref struct Enumerator
     {
         private readonly JSValue _value;
         private readonly JSValue _names;
         private readonly int _count;
         private int _index;
-        private KeyValuePair<JSValue, JSValue>? _current;
+        private JSValueKeyValuePair _current;
 
         internal Enumerator(JSValue value)
         {
@@ -32,48 +30,24 @@ public partial struct JSObject
                 _names = JSValue.Undefined;
                 _count = 0;
             }
-            _index = 0;
+            _index = -1;
             _current = default;
-        }
-
-        public readonly void Dispose()
-        {
         }
 
         public bool MoveNext()
         {
-            if (_index < _count)
+            if (++_index < _count)
             {
                 JSValue name = _names.GetElement(_index);
-                _current = new KeyValuePair<JSValue, JSValue>(name, _value.GetProperty(name));
-                _index++;
+                _current = new JSValueKeyValuePair(name, _value.GetProperty(name));
                 return true;
             }
 
-            _index = _count + 1;
             _current = default;
             return false;
         }
 
-        public readonly KeyValuePair<JSValue, JSValue> Current
-            => _current ?? throw new InvalidOperationException("Unexpected enumerator state");
-
-        readonly object? IEnumerator.Current
-        {
-            get
-            {
-                if (_index == 0 || _index == _count + 1)
-                {
-                    throw new InvalidOperationException("Invalid enumerator state");
-                }
-                return Current;
-            }
-        }
-
-        void IEnumerator.Reset()
-        {
-            _index = 0;
-            _current = default;
-        }
+        public readonly JSValueKeyValuePair Current
+            => ((uint)_index < (uint)_count) ? _current : throw new IndexOutOfRangeException();
     }
 }

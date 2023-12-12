@@ -295,7 +295,7 @@ public static partial class JSNativeApi
     }
 
     public static unsafe JSValue Call(
-        this JSValue thisValue, JSValue thisArg, params JSValue[] args)
+        this JSValue thisValue, JSValue thisArg, JSValueReadOnlySpan args)
         => Call(thisValue, thisArg, new ReadOnlySpan<JSValue>(args));
 
     public static unsafe JSValue Call(

@@ -2,13 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquatable<JSValue>
+public readonly ref partial struct JSObject
 {
     private readonly JSValue _value;
 
@@ -23,11 +22,6 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
     public JSObject() : this(JSValue.CreateObject())
     {
     }
-
-    int ICollection<KeyValuePair<JSValue, JSValue>>.Count
-        => _value.GetPropertyNames().GetArrayLength();
-
-    bool ICollection<KeyValuePair<JSValue, JSValue>>.IsReadOnly => false;
 
     public void DefineProperties(params JSPropertyDescriptor[] descriptors)
     {
@@ -86,10 +80,7 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
     public JSValue CallMethod(JSValue methodName, JSValue arg0, JSValue arg1, JSValue arg2)
         => _value.GetProperty(methodName).Call(_value, arg0, arg1, arg2);
 
-    public JSValue CallMethod(JSValue methodName, params JSValue[] args)
-        => _value.GetProperty(methodName).Call(_value, args);
-
-    public JSValue CallMethod(JSValue methodName, ReadOnlySpan<JSValue> args)
+    public JSValue CallMethod(JSValue methodName, JSValueReadOnlySpan args)
         => _value.GetProperty(methodName).Call(_value, args);
 
     public void Add(JSValue key, JSValue value) => _value.SetProperty(key, value);
@@ -104,33 +95,7 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
         return !value.IsUndefined();
     }
 
-    public void Add(KeyValuePair<JSValue, JSValue> item) => _value.SetProperty(item.Key, item.Value);
-
-    public bool Contains(KeyValuePair<JSValue, JSValue> item) => _value.HasProperty(item.Key);
-
-    public void CopyTo(KeyValuePair<JSValue, JSValue>[] array, int arrayIndex)
-    {
-        int i = arrayIndex;
-        foreach (KeyValuePair<JSValue, JSValue> item in this)
-        {
-            array[i++] = item;
-        }
-    }
-
-    public bool Remove(KeyValuePair<JSValue, JSValue> item) => _value.DeleteProperty(item.Key);
-
     public Enumerator GetEnumerator() => new(_value);
-
-    public ICollection<JSValue> Keys => (JSArray)_value.GetPropertyNames();
-
-    ICollection<JSValue> IDictionary<JSValue, JSValue>.Values => throw new NotSupportedException();
-
-    void ICollection<KeyValuePair<JSValue, JSValue>>.Clear() => throw new NotSupportedException();
-
-    IEnumerator<KeyValuePair<JSValue, JSValue>> IEnumerable<KeyValuePair<JSValue, JSValue>>.GetEnumerator()
-        => GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -148,13 +113,9 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
     public bool Equals(JSValue other) => _value.StrictEquals(other);
 
     public override bool Equals([NotNullWhen(true)] object? obj)
-    {
-        return obj is JSValue other && Equals(other);
-    }
+        => obj is JSReference other && Equals(other.GetValue());
 
     public override int GetHashCode()
-    {
-        throw new NotSupportedException(
+        => throw new NotSupportedException(
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
-    }
 }
