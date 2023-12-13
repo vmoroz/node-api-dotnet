@@ -12,7 +12,7 @@ public static class TaskExtensions
 {
     public static Task<JSReference> AsTask(this JSPromise promise)
     {
-        TaskCompletionSource<JSValue> completion = new();
+        TaskCompletionSource<JSReference> completion = new();
         promise.Then(
             completion.SetResult,
             (JSError error) =>
@@ -22,11 +22,11 @@ public static class TaskExtensions
         return completion.Task;
     }
 
-    public static async Task<T> AsTask<T>(this JSPromise promise, JSValue.To<T> fromJS)
-    {
-        Task<JSValue> jsTask = promise.AsTask();
-        return fromJS(await jsTask);
-    }
+    //public static async Task<T> AsTask<T>(this JSPromise promise, JSValue.To<T> fromJS)
+    //{
+    //    Task<JSValue> jsTask = promise.AsTask();
+    //    return fromJS(await jsTask);
+    //}
 
     public static JSPromise AsPromise(this Task task)
     {
@@ -38,20 +38,20 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             await task;
-            resolve(JSValue.Undefined);
+            resolve(new JSReference(JSValue.Undefined));
         });
     }
 
-    public static JSPromise AsPromise(this Task<JSValue> task)
+    public static JSPromise AsPromise(this Task<JSReference> task)
     {
         if (task.Status == TaskStatus.RanToCompletion)
         {
-            return JSPromise.Resolve(task.Result);
+            return JSPromise.Resolve(task.Result.GetValue());
         }
 
         return new JSPromise(async (resolve) =>
         {
-            JSValue jsValue = await task;
+            JSReference jsValue = await task;
             resolve(jsValue);
         });
     }
@@ -66,7 +66,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             T value = await task;
-            resolve(toJS(value));
+            resolve(new JSReference(toJS(value)));
         });
     }
 
@@ -80,11 +80,11 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             await task;
-            resolve(JSValue.Undefined);
+            resolve(new JSReference(JSValue.Undefined));
         });
     }
 
-    public static JSPromise AsPromise(this ValueTask<JSValue> task)
+    public static JSPromise AsPromise(this ValueTask<JSReference> task)
     {
         if (task.IsCompletedSuccessfully)
         {
@@ -93,7 +93,7 @@ public static class TaskExtensions
 
         return new JSPromise(async (resolve) =>
         {
-            JSValue jsValue = await task;
+            JSReference jsValue = await task;
             resolve(jsValue);
         });
     }
@@ -108,7 +108,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             T value = await task;
-            resolve(toJS(value));
+            resolve(new JSReference(toJS(value)));
         });
     }
 }

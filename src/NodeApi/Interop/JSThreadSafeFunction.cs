@@ -36,8 +36,8 @@ public class JSThreadSafeFunction
     public unsafe JSThreadSafeFunction(int maxQueueSize,
                                 int initialThreadCount,
                                 in JSValue asyncResourceName,
-                                in JSValue? jsFunction = null,
-                                in JSObject? asyncResource = null,
+                                in JSValue jsFunction = default,
+                                in JSValue asyncResource = default,
                                 JSThreadSafeFinalizeCallback? finalize = null,
                                 object? functionContext = null,
                                 JSThreadSafeCallback? jsCaller = null)
@@ -52,7 +52,7 @@ public class JSThreadSafeFunction
         napi_status status = _runtime.CreateThreadSafeFunction(
                                  (napi_env)JSValueScope.Current,
                                  (napi_value)jsFunction,
-                                 (napi_value)(JSValue?)asyncResource,
+                                 (napi_value)asyncResource,
                                  (napi_value)asyncResourceName,
                                  maxQueueSize,
                                  initialThreadCount,
@@ -98,7 +98,7 @@ public class JSThreadSafeFunction
     }
 
     // This API may be called from any thread.
-    public void BlockingCall(Action<JSValue?, object?> callback)
+    public void BlockingCall(Action<JSReference?, object?> callback)
     {
         CallInternal(callback, napi_threadsafe_function_call_mode.napi_tsfn_blocking).ThrowIfFailed();
     }
@@ -122,7 +122,7 @@ public class JSThreadSafeFunction
     }
 
     // This API may be called from any thread.
-    public bool NonBlockingCall(Action<JSValue?, object?> callback)
+    public bool NonBlockingCall(Action<JSReference?, object?> callback)
     {
         return NonBlockingCall(CallInternal(callback, napi_threadsafe_function_call_mode.napi_tsfn_nonblocking));
     }
@@ -281,11 +281,11 @@ public class JSThreadSafeFunction
                 {
                     action();
                 }
-                else if (dataObject is Action<JSValue?, object?> callback)
+                else if (dataObject is Action<JSReference?, object?> callback)
                 {
                     GCHandle contextHandle = GCHandle.FromIntPtr(context);
                     FunctionData functionData = (FunctionData)contextHandle.Target!;
-                    callback((JSValue?)jsCallback, functionData.FunctionContext);
+                    callback(new JSReference((JSValue)jsCallback), functionData.FunctionContext);
                 }
                 else
                 {

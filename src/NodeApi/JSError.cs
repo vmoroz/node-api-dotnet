@@ -119,16 +119,16 @@ public struct JSError
             _ => JSValue.CreateError(ToJSValue(code), (JSValue)_message),
         });
 
-        static JSValue? ToJSValue(string? value)
-            => value is not null ? (JSValue)value : (JSValue?)null;
+        static JSValue ToJSValue(string? value)
+            => value is not null ? (JSValue)value : JSValue.Undefined;
     }
 
-    public JSError(JSValue? error)
+    public JSError(JSValue error)
     {
-        if (error is null)
+        if (error.IsUndefined())
             return;
 
-        _errorRef = CreateErrorReference(error.Value);
+        _errorRef = CreateErrorReference(error);
     }
 
     public JSError(Exception exception)
@@ -157,7 +157,11 @@ public struct JSError
             {
                 try
                 {
-                    _message = (string?)_errorRef.GetValue()?["message"];
+                    JSValue value = _errorRef.GetValue();
+                    if (!value.IsUndefined())
+                    {
+                        _message = (string?)value["message"];
+                    }
                 }
                 catch
                 {
@@ -173,24 +177,19 @@ public struct JSError
     {
         get
         {
-            JSValue? error = _errorRef?.GetValue();
-            if (error is JSValue jsError)
+            JSValue jsError = _errorRef.GetValue();
+            if (!jsError.IsObject())
             {
-                if (jsError.TypeOf() != JSValueType.Object)
-                {
-                    return jsError;
-                }
-
-                // We are checking if the object is wrapped
-                if (jsError.HasOwnProperty(ErrorWrapValue))
-                {
-                    return jsError[ErrorWrapValue];
-                }
-
                 return jsError;
             }
 
-            return JSValue.Undefined;
+            // We are checking if the object is wrapped
+            if (jsError.HasOwnProperty(ErrorWrapValue))
+            {
+                return jsError[ErrorWrapValue];
+            }
+
+            return jsError;
         }
     }
 

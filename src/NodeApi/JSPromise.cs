@@ -29,9 +29,9 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
         _value = value;
     }
 
-    public delegate void ResolveCallback(JSCallbackAction1 resolve);
+    public delegate void ResolveCallback(Action<JSReference> solve);
 
-    public delegate Task AsyncResolveCallback(JSCallbackAction1 resolve);
+    public delegate Task AsyncResolveCallback(Action<JSReference> resolve);
 
     public delegate void ResolveRejectCallback(
         JSCallbackAction1 resolve,
@@ -160,6 +160,24 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
         return (JSPromise)_value.CallMethod("then", fulfilledFunction, rejectedFunction);
     }
 
+    public JSPromise Then(Action<JSReference>? fulfilled, Action<JSError>? rejected)
+    {
+        JSValue fulfilledFunction = fulfilled == null ? JSValue.Undefined :
+            JSValue.CreateFunction(nameof(fulfilled), (args) =>
+            {
+                fulfilled(new JSReference(args[0]));
+                return JSValue.Undefined;
+            });
+        JSValue rejectedFunction = rejected == null ? JSValue.Undefined :
+            JSValue.CreateFunction(nameof(rejected), (args) =>
+            {
+                rejected(new JSError(args[0]));
+                return JSValue.Undefined;
+            });
+        return (JSPromise)_value.CallMethod("then", fulfilledFunction, rejectedFunction);
+    }
+
+
     /// <summary>
     /// Registers a callback that is invoked when a promise is rejected, and returns a new
     /// chained promise.
@@ -203,6 +221,9 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
     {
         return (JSPromise)JSRuntimeContext.Current.Import(null, "Promise").CallMethod("resolve", value);
     }
+
+    public static JSPromise Resolve(JSReference value)
+        => Resolve(value.GetValue());
 
     /// <summary>
     /// Creates a new promise that is rejected with the provided reason.
@@ -282,11 +303,11 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
             _handle = handle;
         }
 
-        public readonly void Resolve(JSValue resolution)
+        public readonly void Resolve(JSReference resolution)
         {
             // _handle becomes invalid after this call
             JSValueScope.CurrentRuntime.ResolveDeferred(
-                (napi_env)JSValueScope.Current, _handle, (napi_value)resolution)
+                (napi_env)JSValueScope.Current, _handle, (napi_value)resolution.GetValue())
                 .ThrowIfFailed();
         }
 

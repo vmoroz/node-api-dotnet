@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
@@ -41,7 +42,7 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod("addListener", eventName, listener);
+            _nodeEmitter.GetValue().CallMethod("addListener", eventName, listener);
             return;
         }
 
@@ -53,7 +54,7 @@ public class JSEventEmitter : IDisposable
         JSArray eventListeners;
         if (_listeners!.TryGetValue(eventName, out JSReference? eventListenersReference))
         {
-            eventListeners = (JSArray)eventListenersReference.GetValue()!.Value;
+            eventListeners = (JSArray)eventListenersReference.GetValue();
         }
         else
         {
@@ -68,13 +69,13 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod("removeListener", eventName, listener);
+            _nodeEmitter.GetValue().CallMethod("removeListener", eventName, listener);
             return;
         }
 
         if (_listeners!.TryGetValue(eventName, out JSReference? eventListenersReference))
         {
-            JSArray eventListeners = (JSArray)eventListenersReference.GetValue()!.Value;
+            JSArray eventListeners = (JSArray)eventListenersReference.GetValue();
             eventListeners.Remove(listener);
         }
     }
@@ -83,18 +84,19 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod(
+            _nodeEmitter.GetValue().CallMethod(
                 "once", eventName, JSValue.CreateFunction(eventName, listener));
             return;
         }
 
-        JSValue onceListener = default;
-        onceListener = JSValue.CreateFunction(eventName, (args) =>
+        JSReference? onceListenerRef = default;
+        JSValue onceListener = JSValue.CreateFunction(eventName, (args) =>
         {
             listener(args);
-            RemoveListener(eventName, onceListener);
+            RemoveListener(eventName, onceListenerRef!.GetValue());
             return default;
         });
+        onceListenerRef = new JSReference(onceListener);
 
         AddListener(eventName, onceListener);
     }
@@ -103,34 +105,19 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod("once", eventName, listener);
+            _nodeEmitter.GetValue().CallMethod("once", eventName, listener);
             return;
         }
 
-        JSValue onceListener = default;
-        onceListener = JSValue.CreateFunction(eventName, (args) =>
+        JSReference listenerRef = new JSReference(listener);
+        JSReference? onceListenerRef = default;
+        JSValue onceListener = JSValue.CreateFunction(eventName, (args) =>
         {
-            if (args.Length == 0)
-            {
-                listener.Call(args.ThisArg);
-            }
-            else if (args.Length == 1)
-            {
-                listener.Call(args.ThisArg, args[0]);
-            }
-            else
-            {
-                JSValue[] argsArray = new JSValue[args.Length];
-                for (int i = 0; i < argsArray.Length; i++)
-                {
-                    argsArray[i] = args[i];
-                }
-                listener.Call(args.ThisArg, argsArray);
-            }
-
-            RemoveListener(eventName, onceListener);
+            listenerRef.GetValue().Call(args.ThisArg, args.Arguments);
+            RemoveListener(eventName, onceListenerRef!.GetValue());
             return default;
         });
+        onceListenerRef = new JSReference(onceListener);
 
         AddListener(eventName, onceListener);
     }
@@ -139,13 +126,13 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod("emit", eventName);
+            _nodeEmitter.GetValue().CallMethod("emit", eventName);
             return;
         }
 
         if (_listeners!.TryGetValue(eventName, out JSReference? eventListenersReference))
         {
-            JSArray eventListeners = (JSArray)eventListenersReference.GetValue()!.Value;
+            JSArray eventListeners = (JSArray)eventListenersReference.GetValue();
             foreach (JSValue listener in eventListeners)
             {
                 listener.Call(thisArg: default);
@@ -157,13 +144,13 @@ public class JSEventEmitter : IDisposable
     {
         if (_nodeEmitter != null)
         {
-            _nodeEmitter.GetValue()!.Value.CallMethod("emit", eventName, arg);
+            _nodeEmitter.GetValue().CallMethod("emit", eventName, arg);
             return;
         }
 
         if (_listeners!.TryGetValue(eventName, out JSReference? eventListenersReference))
         {
-            JSArray eventListeners = (JSArray)eventListenersReference.GetValue()!.Value;
+            JSArray eventListeners = (JSArray)eventListenersReference.GetValue();
             foreach (JSValue listener in eventListeners)
             {
                 listener.Call(thisArg: default, arg);
@@ -171,20 +158,21 @@ public class JSEventEmitter : IDisposable
         }
     }
 
-    public void Emit(string eventName, params JSValue[] args)
+    public void Emit(string eventName, JSValueReadOnlySpan args)
     {
         if (_nodeEmitter != null)
         {
-            JSValue[] argsArray = new JSValue[args.Length + 1];
-            argsArray[0] = eventName;
-            args.CopyTo(argsArray, 1);
-            _nodeEmitter.GetValue()!.Value.CallMethod("emit", argsArray);
+            Span<napi_value> argValues = stackalloc napi_value[args.Length + 1];
+            JSValueSpan argsSpan = new JSValueSpan(argValues);
+            argsSpan[0] = eventName;
+            args.CopyTo(argsSpan, 1);
+            _nodeEmitter.GetValue().CallMethod("emit", argsSpan);
             return;
         }
 
         if (_listeners!.TryGetValue(eventName, out JSReference? eventListenersReference))
         {
-            JSArray eventListeners = (JSArray)eventListenersReference.GetValue()!.Value;
+            JSArray eventListeners = (JSArray)eventListenersReference.GetValue();
             foreach (JSValue listener in eventListeners)
             {
                 listener.Call(thisArg: default, args);

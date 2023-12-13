@@ -60,8 +60,8 @@ public class JSStructBuilder<T> where T : struct
     /// </summary>
     public JSStructBuilder<T> AddProperty(
         string name,
-        Func<JSValue>? getter,
-        Action<JSValue>? setter,
+        JSCallbackFunc0? getter,
+        JSCallbackAction1? setter,
         JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty)
     {
         return AddProperty(

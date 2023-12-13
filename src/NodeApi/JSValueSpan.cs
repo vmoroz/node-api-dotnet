@@ -3,6 +3,7 @@
 
 using System;
 using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
@@ -15,6 +16,12 @@ public readonly ref struct JSValueSpan
     internal JSValueSpan(JSValueScope scope, Span<napi_value> span)
     {
         Scope = scope;
+        _span = span;
+    }
+
+    internal JSValueSpan(Span<napi_value> span)
+    {
+        Scope = JSValueScope.Current;
         _span = span;
     }
 
@@ -47,6 +54,14 @@ public readonly ref struct JSValueSpan
     public override int GetHashCode() =>
         throw new NotSupportedException("Not supported");
 #pragma warning restore CS0809
+
+    public void CopyTo(JSValueSpan destination) => _span.CopyTo(destination._span);
+
+    /// <summary>
+    /// Copies all elements of this span into a destination span, starting at the specified index.
+    /// </summary>
+    public void CopyTo(JSValueSpan destination, int destinationIndex)
+        => _span.CopyTo(destination._span.Slice(destinationIndex));
 
     public static JSValueSpan Empty => default;
 

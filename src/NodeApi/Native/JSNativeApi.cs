@@ -403,7 +403,7 @@ public static partial class JSNativeApi
         => thisValue.GetProperty(methodName).Call(thisValue, arg0, arg1, arg2);
 
     public static JSValue CallMethod(
-        this JSValue thisValue, JSValue methodName, params JSValue[] args)
+        this JSValue thisValue, JSValue methodName, JSValueReadOnlySpan args)
         => thisValue.GetProperty(methodName).Call(thisValue, args);
 
     public static JSValue CallMethod(

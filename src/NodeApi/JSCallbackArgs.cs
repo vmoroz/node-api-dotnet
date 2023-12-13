@@ -49,6 +49,8 @@ public readonly ref struct JSCallbackArgs
 
     public object? Data { get; }
 
+    public JSValueReadOnlySpan Arguments => new JSValueReadOnlySpan(Scope, _args);
+
     internal static void GetDataAndLength(
         JSValueScope scope,
         napi_callback_info callbackInfo,

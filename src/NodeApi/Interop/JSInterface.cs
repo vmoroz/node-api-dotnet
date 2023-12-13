@@ -21,7 +21,7 @@ public abstract class JSInterface
     /// Gets the JS value for a .NET object, if the object is a proxy to a JS object that
     /// implements a .NET interface.
     /// </summary>
-    public static JSValue? GetJSValue(object obj) => (obj as JSInterface)?.Value;
+    public static JSValue GetJSValue(object obj) => (obj is JSInterface intf) ? intf.Value : JSValue.Undefined;
 
     /// <summary>
     /// Gets a reference to the underlying JS value.
@@ -31,7 +31,7 @@ public abstract class JSInterface
     /// <summary>
     /// Gets the underlying JS value.
     /// </summary>
-    protected JSValue Value => ValueReference.GetValue()!.Value;
+    protected JSValue Value => ValueReference.GetValue();
 
     /// <summary>
     /// Dynamically invokes an interface method JS adapter delegate after obtaining the JS `this`
@@ -41,13 +41,13 @@ public abstract class JSInterface
     /// <param name="args">Array of method arguments starting at index 1. Index 0 is reserved
     /// for the JS `this` value.</param>
     /// <remarks>
-    /// This method is used by the dynamically-emitted interface marshalling code.
+    /// This method is used by the dynamically-emitted interface marshaling code.
     /// </remarks>
     protected object? DynamicInvoke(Delegate interfaceMethod, object?[] args)
     {
         return ValueReference.Run((value) =>
         {
-            args[0] = value;
+            args[0] = new JSReference(value);
             return interfaceMethod.DynamicInvoke(args);
         });
     }
@@ -62,7 +62,7 @@ public abstract class JSInterface
     /// <param name="args">Array of method arguments starting at index 1. Index 0 is reserved
     /// for the JS `this` value.</param>
     /// <remarks>
-    /// This method is used by the dynamically-emitted interface marshalling code.
+    /// This method is used by the dynamically-emitted interface marshaling code.
     /// </remarks>
     protected object? DynamicInvoke(
         MethodInfo interfaceMethod,
@@ -71,7 +71,7 @@ public abstract class JSInterface
     {
         return ValueReference.Run((value) =>
         {
-            args[0] = value;
+            args[0] = new JSReference(value);
             Delegate interfaceMethodDelegate = delegateProvider(interfaceMethod);
             return interfaceMethodDelegate.DynamicInvoke(args);
         });

@@ -140,17 +140,17 @@ public class JSReference : IDisposable
     /// associated with the reference to switch to the JS thread (if necessary) while operating
     /// on the value.
     /// </summary>
-    public void Run(Action<JSValue> action)
+    public void Run(JSCallbackAction1 action)
     {
         void GetValueAndRunAction()
         {
-            JSValue? value = GetValue();
-            if (!value.HasValue)
+            JSValue value = GetValue();
+            if (value.TypeOf() == JSValueType.Undefined)
             {
                 throw new NullReferenceException("The JS reference is null.");
             }
 
-            action(value.Value);
+            action(value);
         }
 
         JSSynchronizationContext? synchronizationContext = SynchronizationContext;
@@ -169,29 +169,30 @@ public class JSReference : IDisposable
     /// associated with the reference to switch to the JS thread (if necessary) while operating
     /// on the value.
     /// </summary>
-    public T Run<T>(Func<JSValue, T> action)
-    {
-        T GetValueAndRunAction()
-        {
-            JSValue? value = GetValue();
-            if (!value.HasValue)
-            {
-                throw new NullReferenceException("The JS reference is null.");
-            }
+    // TODO: (vmoroz)
+    //public T Run<T>(JSCallbackFunc<JSValue, T> action)
+    //{
+    //    T GetValueAndRunAction()
+    //    {
+    //        JSValue? value = GetValue();
+    //        if (!value.HasValue)
+    //        {
+    //            throw new NullReferenceException("The JS reference is null.");
+    //        }
 
-            return action(value.Value);
-        }
+    //        return action(value.Value);
+    //    }
 
-        JSSynchronizationContext? synchronizationContext = SynchronizationContext;
-        if (synchronizationContext != null)
-        {
-            return synchronizationContext.Run(GetValueAndRunAction);
-        }
-        else
-        {
-            return GetValueAndRunAction();
-        }
-    }
+    //    JSSynchronizationContext? synchronizationContext = SynchronizationContext;
+    //    if (synchronizationContext != null)
+    //    {
+    //        return synchronizationContext.Run(GetValueAndRunAction);
+    //    }
+    //    else
+    //    {
+    //        return GetValueAndRunAction();
+    //    }
+    //}
 
     public bool IsDisposed { get; private set; }
 
