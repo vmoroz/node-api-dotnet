@@ -48,13 +48,13 @@ public readonly ref struct JSValueReadOnlySpan
         throw new NotSupportedException("Not supported");
 #pragma warning restore CS0809
 
-    public void CopyTo(JSValueSpan destination) => _span.CopyTo(destination._span);
+    public void CopyTo(JSValueSpan destination) => _span.CopyTo(destination.Span);
 
     /// <summary>
     /// Copies all elements of this span into a destination span, starting at the specified index.
     /// </summary>
     public void CopyTo(JSValueSpan destination, int destinationIndex)
-        => _span.CopyTo(destination._span.Slice(destinationIndex));
+        => _span.CopyTo(destination.Span.Slice(destinationIndex));
 
     public static JSValueSpan Empty => default;
 

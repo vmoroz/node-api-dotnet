@@ -199,7 +199,7 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS constructor.</returns>
     internal JSValue RegisterClass<T>(JSValue constructorFunction) where T : class
     {
-        JSCheckedValue ctor = constructorFunction;
+        JSValueChecked ctor = constructorFunction;
         _classMap.AddOrUpdate(
             typeof(T),
             (_) => new JSReference(ctor.Value, isWeak: false),
@@ -217,7 +217,7 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS object.</returns>
     internal JSValue RegisterStaticClass(string name, JSValue classObject)
     {
-        JSCheckedValue cls = classObject;
+        JSValueChecked cls = classObject;
         _staticClassMap.AddOrUpdate(
             name,
             (_) => new JSReference(cls.Value, isWeak: false),
@@ -294,7 +294,7 @@ public sealed class JSRuntimeContext : IDisposable
             return JSValue.Undefined;
         }
 
-        JSValue? wrapper = null;
+        JSValueChecked? wrapper = null;
         JSReference CreateWrapper(T obj)
         {
             if (obj is Stream stream)
@@ -311,7 +311,7 @@ public sealed class JSRuntimeContext : IDisposable
                 wrapper = constructorFunction.CallAsConstructor(externalValue);
             }
 
-            return new(wrapper.Value, isWeak: true);
+            return new((JSValue)wrapper, isWeak: true);
         }
 
         _objectMap.AddOrUpdate(
@@ -336,7 +336,7 @@ public sealed class JSRuntimeContext : IDisposable
                 return CreateWrapper(obj);
             });
 
-        return wrapper!.Value;
+        return (JSValue)wrapper;
     }
 
     public JSValue GetOrCreateCollectionWrapper<T>(
@@ -496,7 +496,7 @@ public sealed class JSRuntimeContext : IDisposable
         object collection,
         JSCallbackFunc0 createWrapper)
     {
-        JSCheckedValue? wrapper = null;
+        JSValueChecked? wrapper = null;
 
         _objectMap.AddOrUpdate(
             collection,
@@ -531,14 +531,14 @@ public sealed class JSRuntimeContext : IDisposable
     /// <param name="constructorFunction">JS struct constructor function returned from
     /// <see cref="JSNativeApi.DefineClass"/></param>
     /// <returns>The JS constructor.</returns>
-    internal JSValue RegisterStruct<T>(JSValue constructorFunction) where T : struct
+    internal JSValue RegisterStruct<T>(JSValueChecked constructorFunction) where T : struct
     {
         _structMap.AddOrUpdate(
             typeof(T),
-            (_) => new JSReference(constructorFunction, isWeak: false),
+            (_) => new JSReference(constructorFunction.Value, isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Struct already registered for JS export: " + typeof(T)));
-        return constructorFunction;
+        return constructorFunction.Value;
     }
 
     /// <summary>
@@ -553,14 +553,14 @@ public sealed class JSRuntimeContext : IDisposable
                 "Struct not registered for JS export: " + typeof(T));
         }
 
-        JSValue? constructorFunction = constructorReference!.GetValue();
-        if (!constructorFunction.HasValue)
+        JSValue constructorFunction = constructorReference!.GetValue();
+        if (constructorFunction.IsUndefined())
         {
             // This should never happen because the reference is "strong".
             throw new InvalidOperationException("Failed to resolve struct constructor reference.");
         }
 
-        return JSNativeApi.CallAsConstructor(constructorFunction.Value);
+        return JSNativeApi.CallAsConstructor(constructorFunction);
     }
 
     /// <summary>
@@ -607,7 +607,7 @@ public sealed class JSRuntimeContext : IDisposable
             }
 
         });
-        return reference.GetValue() ?? JSValue.Undefined;
+        return reference.GetValue();
     }
 
     public void Dispose()

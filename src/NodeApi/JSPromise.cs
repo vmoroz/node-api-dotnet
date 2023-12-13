@@ -29,9 +29,9 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
         _value = value;
     }
 
-    public delegate void ResolveCallback(Action<JSReference> solve);
+    public delegate void ResolveCallback(JSCallbackAction1 solve);
 
-    public delegate Task AsyncResolveCallback(Action<JSReference> resolve);
+    public delegate Task AsyncResolveCallback(JSCallbackAction1 resolve);
 
     public delegate void ResolveRejectCallback(
         JSCallbackAction1 resolve,
@@ -303,11 +303,11 @@ public readonly ref struct JSPromise //: IEquatable<JSValue>
             _handle = handle;
         }
 
-        public readonly void Resolve(JSReference resolution)
+        public readonly void Resolve(JSValue resolution)
         {
             // _handle becomes invalid after this call
             JSValueScope.CurrentRuntime.ResolveDeferred(
-                (napi_env)JSValueScope.Current, _handle, (napi_value)resolution.GetValue())
+                (napi_env)JSValueScope.Current, _handle, (napi_value)resolution)
                 .ThrowIfFailed();
         }
 

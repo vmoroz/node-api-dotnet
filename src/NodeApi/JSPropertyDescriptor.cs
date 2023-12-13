@@ -17,12 +17,12 @@ public readonly struct JSPropertyDescriptor
     // Either Name or NameValue should be non-null.
     // NameValue supports non-string property names like symbols.
     public string? Name { get; }
-    public JSCheckedValue? NameValue { get; }
+    public JSValueChecked? NameValue { get; }
 
     public JSCallbackFunc? Method { get; }
     public JSCallbackFunc? Getter { get; }
     public JSCallbackFunc? Setter { get; }
-    public JSCheckedValue? Value { get; }
+    public JSValueChecked? Value { get; }
     public JSPropertyAttributes Attributes { get; }
     public object? Data { get; }
 
@@ -31,7 +31,7 @@ public readonly struct JSPropertyDescriptor
         JSCallbackFunc? method = null,
         JSCallbackFunc? getter = null,
         JSCallbackFunc? setter = null,
-        JSValue value = default,
+        JSValueChecked? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {
@@ -51,7 +51,7 @@ public readonly struct JSPropertyDescriptor
         JSCallbackFunc? method = null,
         JSCallbackFunc? getter = null,
         JSCallbackFunc? setter = null,
-        JSValue value = default,
+        JSValueChecked? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {
@@ -78,7 +78,7 @@ public readonly struct JSPropertyDescriptor
             throw new ArgumentException($"Either `{nameof(getter)}` or `{nameof(setter)}` or both must be not null");
         }
 
-        return new JSPropertyDescriptor(name, null, getter, setter, JSValue.Undefined, attributes, data);
+        return new JSPropertyDescriptor(name, null, getter, setter, null, attributes, data);
     }
 
     public static JSPropertyDescriptor ForValue(
@@ -96,6 +96,6 @@ public readonly struct JSPropertyDescriptor
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {
-        return new JSPropertyDescriptor(name, method, null, null, JSValue.Undefined, attributes, data);
+        return new JSPropertyDescriptor(name, method, null, null, null, attributes, data);
     }
 }

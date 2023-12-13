@@ -27,6 +27,8 @@ public readonly ref struct JSValueSpan
 
     internal JSValueScope Scope { get; }
 
+    internal Span<napi_value> Span => _span;
+
     public JSValue this[int index]
     {
         get => index < _span.Length ? new JSValue(_span[index], Scope) : default;

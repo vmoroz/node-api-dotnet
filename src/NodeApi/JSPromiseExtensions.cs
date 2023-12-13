@@ -38,7 +38,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             await task;
-            resolve(new JSReference(JSValue.Undefined));
+            resolve(JSValue.Undefined);
         });
     }
 
@@ -52,7 +52,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             JSReference jsValue = await task;
-            resolve(jsValue);
+            resolve(jsValue.GetValue());
         });
     }
 
@@ -66,7 +66,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             T value = await task;
-            resolve(new JSReference(toJS(value)));
+            resolve(toJS(value));
         });
     }
 
@@ -80,7 +80,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             await task;
-            resolve(new JSReference(JSValue.Undefined));
+            resolve(JSValue.Undefined);
         });
     }
 
@@ -94,7 +94,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             JSReference jsValue = await task;
-            resolve(jsValue);
+            resolve(jsValue.GetValue());
         });
     }
 
@@ -108,7 +108,7 @@ public static class TaskExtensions
         return new JSPromise(async (resolve) =>
         {
             T value = await task;
-            resolve(new JSReference(toJS(value)));
+            resolve(toJS(value));
         });
     }
 }

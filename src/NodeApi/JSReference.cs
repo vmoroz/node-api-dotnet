@@ -135,6 +135,13 @@ public class JSReference : IDisposable
         return result;
     }
 
+    public JSValueChecked? GetValueOptional()
+    {
+        JSValueScope.CurrentRuntime.GetReferenceValue(Env, _handle, out napi_value result)
+            .ThrowIfFailed();
+        return result;
+    }
+
     /// <summary>
     /// Runs an action with the referenced value, using the <see cref="JSSynchronizationContext" />
     /// associated with the reference to switch to the JS thread (if necessary) while operating
@@ -169,30 +176,29 @@ public class JSReference : IDisposable
     /// associated with the reference to switch to the JS thread (if necessary) while operating
     /// on the value.
     /// </summary>
-    // TODO: (vmoroz)
-    //public T Run<T>(JSCallbackFunc<JSValue, T> action)
-    //{
-    //    T GetValueAndRunAction()
-    //    {
-    //        JSValue? value = GetValue();
-    //        if (!value.HasValue)
-    //        {
-    //            throw new NullReferenceException("The JS reference is null.");
-    //        }
+    public T Run<T>(Func<JSValueChecked, T> action)
+    {
+        T GetValueAndRunAction()
+        {
+            JSValueChecked value = GetValue();
+            if (value.Value.IsUndefined())
+            {
+                throw new NullReferenceException("The JS reference is null.");
+            }
 
-    //        return action(value.Value);
-    //    }
+            return action(value.Value);
+        }
 
-    //    JSSynchronizationContext? synchronizationContext = SynchronizationContext;
-    //    if (synchronizationContext != null)
-    //    {
-    //        return synchronizationContext.Run(GetValueAndRunAction);
-    //    }
-    //    else
-    //    {
-    //        return GetValueAndRunAction();
-    //    }
-    //}
+        JSSynchronizationContext? synchronizationContext = SynchronizationContext;
+        if (synchronizationContext != null)
+        {
+            return synchronizationContext.Run(GetValueAndRunAction);
+        }
+        else
+        {
+            return GetValueAndRunAction();
+        }
+    }
 
     public bool IsDisposed { get; private set; }
 

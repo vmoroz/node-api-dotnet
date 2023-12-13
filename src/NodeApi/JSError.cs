@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -177,21 +176,29 @@ public struct JSError
     {
         get
         {
-            JSValue jsError = _errorRef.GetValue();
-            if (!jsError.IsObject())
+            JSValueChecked? error = _errorRef?.GetValueOptional();
+            if (error is JSValueChecked jsErrorChecked)
             {
+                JSValue jsError = jsErrorChecked.Value;
+                if (!jsError.IsObject())
+                {
+                    return jsError;
+                }
+
+                // We are checking if the object is wrapped
+                if (jsError.HasOwnProperty(ErrorWrapValue))
+                {
+                    return jsError[ErrorWrapValue];
+                }
+
                 return jsError;
             }
 
-            // We are checking if the object is wrapped
-            if (jsError.HasOwnProperty(ErrorWrapValue))
-            {
-                return jsError[ErrorWrapValue];
-            }
-
-            return jsError;
+            return JSValue.Undefined;
         }
     }
+
+    public readonly JSValueChecked ValueChecked => Value;
 
     public readonly void ThrowError()
     {
@@ -237,7 +244,7 @@ public struct JSError
 
         // If the exception is a JSException for an error value, throw that error value;
         // otherwise construct a new error value from the exception message.
-        JSValue error = (exception as JSException)?.Error?.Value ??
+        JSValueChecked error = (exception as JSException)?.Error?.ValueChecked ??
             JSValue.CreateError(code: null, (JSValue)message);
 
         // When running on V8, the `Error.captureStackTrace()` function and `Error.stack` property
@@ -256,7 +263,7 @@ public struct JSError
 
             // Override the `stack` property of the JS Error object, and add private
             // properties that the overridden property getter uses to construct the stack.
-            error.DefineProperties(
+            error.Value.DefineProperties(
                 JSPropertyDescriptor.Accessor(
                     "stack", GetErrorStack, setter: null, JSPropertyAttributes.DefaultProperty),
                 JSPropertyDescriptor.ForValue("__dotnetStack", dotnetStack),

@@ -223,7 +223,7 @@ public static partial class JSNativeApi
 
     public static unsafe void DefineProperties(this JSValue thisValue, IReadOnlyCollection<JSPropertyDescriptor> descriptors)
     {
-        JSCheckedValue self = thisValue;
+        JSValueChecked self = thisValue;
         nint[] handles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
             self.Runtime.DefineProperties(
                 self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
@@ -233,7 +233,7 @@ public static partial class JSNativeApi
 
     public static unsafe void DefineProperties(this JSValue thisValue, params JSPropertyDescriptor[] descriptors)
     {
-        JSCheckedValue self = thisValue;
+        JSValueChecked self = thisValue;
         nint[] handles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
             self.Runtime.DefineProperties(
                 self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
@@ -309,7 +309,7 @@ public static partial class JSNativeApi
     }
 
     public static unsafe JSValue Call(
-        this JSValue thisValue, JSValue thisArg, ReadOnlySpan<JSCheckedValue> args)
+        this JSValue thisValue, JSValue thisArg, ReadOnlySpan<JSValueChecked> args)
     {
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
@@ -372,11 +372,11 @@ public static partial class JSNativeApi
             .ThrowIfFailed(result);
     }
 
-    public static unsafe JSValue CallAsConstructor(this JSValue thisValue, params JSCheckedValue[] args)
-        => CallAsConstructor(thisValue, new ReadOnlySpan<JSCheckedValue>(args));
+    public static unsafe JSValue CallAsConstructor(this JSValue thisValue, params JSValueChecked[] args)
+        => CallAsConstructor(thisValue, new ReadOnlySpan<JSValueChecked>(args));
 
     public static unsafe JSValue CallAsConstructor(
-        this JSValue thisValue, ReadOnlySpan<JSCheckedValue> args)
+        this JSValue thisValue, ReadOnlySpan<JSValueChecked> args)
     {
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
@@ -417,7 +417,7 @@ public static partial class JSNativeApi
         => thisValue.GetProperty(methodName).Call(thisValue, args);
 
     public static JSValue CallMethod(
-        this JSValue thisValue, JSValue methodName, ReadOnlySpan<JSCheckedValue> args)
+        this JSValue thisValue, JSValue methodName, ReadOnlySpan<JSValueChecked> args)
         => thisValue.GetProperty(methodName).Call(thisValue, args);
 
     public static JSValue CallMethod(
@@ -451,7 +451,7 @@ public static partial class JSNativeApi
         params JSPropertyDescriptor[] propertyDescriptors)
     {
         GCHandle descriptorHandle = JSRuntimeContext.Current.AllocGCHandle(constructorDescriptor);
-        JSCheckedValue? func = null;
+        JSValueChecked? func = null;
         napi_callback callback = new(
             Current?.ScopeType == JSValueScopeType.NoContext
             ? s_invokeJSCallbackNC : s_invokeJSCallback);

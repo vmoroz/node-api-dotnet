@@ -70,7 +70,7 @@ internal unsafe partial class NativeHost : IDisposable
         {
             string message = $"Failed to load CLR native host module: {ex}";
             Trace(message);
-            s_jsRuntime.Throw(env, (napi_value)JSValue.CreateError(null, (JSValue)message));
+            s_jsRuntime.Throw(env, (napi_value)JSValue.CreateError(default, (JSValue)message));
             hostScope.Dispose();
         }
 
@@ -105,7 +105,7 @@ internal unsafe partial class NativeHost : IDisposable
                 // Normally this shouldn't happen because the host package initialization
                 // script would only be loaded once by require(). But certain situations like
                 // drive letter or path casing inconsistencies can cause it to be loaded twice.
-                return _exports.GetValue()!.Value;
+                return _exports.GetValue();
             }
             else
             {

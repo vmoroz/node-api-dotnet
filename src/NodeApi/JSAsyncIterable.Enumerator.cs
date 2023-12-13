@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,13 +11,11 @@ public partial struct JSAsyncIterable
 {
     public struct Enumerator : IAsyncEnumerator<JSReference>
     {
-        private readonly JSReference _iterable;
         private readonly JSReference _iterator;
         private JSReference? _current;
 
         internal Enumerator(JSValue iterable)
         {
-            _iterable = new JSReference(iterable);
             _iterator = new JSReference(iterable.CallMethod(JSSymbol.AsyncIterator));
             _current = default;
         }

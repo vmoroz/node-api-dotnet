@@ -530,7 +530,7 @@ internal static class JSCollectionProxies
                             return JSValue.CreateFunction("set", (args) =>
                             {
                                 dictionary.Add(keyFromJS(args[0]), valueFromJS(args[1]));
-                                return target;
+                                return true;
                             });
                         case "delete":
                             return JSValue.CreateFunction("delete", (args) =>

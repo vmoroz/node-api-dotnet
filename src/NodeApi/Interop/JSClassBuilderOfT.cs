@@ -219,7 +219,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
             {
                 throw new InvalidOperationException("Enum properties must be static.");
             }
-            if (property.Value?.IsNumber() != true)
+            if (property.Value?.Value.IsNumber() != true)
             {
                 throw new InvalidOperationException("Enum property values must be numbers.");
             }
@@ -236,7 +236,9 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
         {
             if (property.Value.HasValue)
             {
-                obj[property.Value!.Value] = property.NameValue ?? (JSValue)property.Name!;
+                obj[property.Value!.Value.Value] = property.NameValue.HasValue
+                                                 ? property.NameValue.Value.Value
+                                                 : (JSValue)property.Name!;
             }
         }
 

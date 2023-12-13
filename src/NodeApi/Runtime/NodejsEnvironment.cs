@@ -148,7 +148,7 @@ public sealed class NodejsEnvironment : IDisposable
     /// <seealso cref="UnhandledPromiseRejection" />
     public class UnhandledPromiseRejectionEventArgs : EventArgs
     {
-        public JSValue Error { get; set; }
+        public JSValueChecked Error { get; set; }
     }
 
     private EventHandler<UnhandledPromiseRejectionEventArgs>? _unhandledPromiseRejection;
@@ -197,7 +197,7 @@ public sealed class NodejsEnvironment : IDisposable
 
     private void RemoveUnhandledPromiseRejectionListener()
     {
-        JSValue listener = _unhandledPromiseRejectionListener!.GetValue()!.Value;
+        JSValue listener = _unhandledPromiseRejectionListener!.GetValue();
         JSValue.Global["process"].CallMethod("off", "unhandledRejection", listener);
         _unhandledPromiseRejectionListener.Dispose();
         _unhandledPromiseRejectionListener = null;

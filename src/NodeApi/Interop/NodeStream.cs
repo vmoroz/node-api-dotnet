@@ -18,7 +18,7 @@ public partial class NodeStream : Stream
 
     public static explicit operator NodeStream(JSValue value) => new(value);
     public static implicit operator JSValue(NodeStream stream)
-        => stream._valueReference.GetValue() ?? default;
+        => stream._valueReference.GetValue();
 
     private NodeStream(JSValue value)
     {
@@ -53,8 +53,8 @@ public partial class NodeStream : Stream
         }));
     }
 
-    private JSValue Value => _valueReference.GetValue() ??
-        throw new ObjectDisposedException(nameof(NodeStream));
+    private JSValue Value => _valueReference.GetValue();
+    //TODO: (vmoroz)        throw new ObjectDisposedException(nameof(NodeStream));
 
     public override bool CanRead => Value.HasProperty("read");
 
@@ -131,11 +131,11 @@ public partial class NodeStream : Stream
         ThrowIfError();
 
         int count = buffer.Length;
-        JSValue value = Value;
-        JSValue result = value.CallMethod("read", count);
-        if (result.IsNull())
+        JSValueChecked value = Value;
+        JSValueChecked result = value.Value.CallMethod("read", count);
+        if (result.Value.IsNull())
         {
-            if ((bool)value.GetProperty("readableEnded"))
+            if ((bool)value.Value.GetProperty("readableEnded"))
             {
                 return 0;
             }
@@ -147,23 +147,23 @@ public partial class NodeStream : Stream
                 ThrowIfError();
 
                 value = Value;
-                result = value.CallMethod("read", count);
+                result = value.Value.CallMethod("read", count);
             }
         }
 
-        if (!result.IsTypedArray())
+        if (!result.Value.IsTypedArray())
         {
-            if (result.IsNull())
+            if (result.Value.IsNull())
             {
                 return 0;
             }
 
             // The readable stream may be in "object mode", which isn't supported.
             throw new NotSupportedException(
-                "Unsupported stream read result type: " + result.TypeOf());
+                "Unsupported stream read result type: " + result.Value.TypeOf());
         }
 
-        Memory<byte> bytes = ((JSTypedArray<byte>)result).Memory;
+        Memory<byte> bytes = ((JSUInt8Array)result.Value).Memory;
         bytes.CopyTo(buffer);
         return bytes.Length;
     }
@@ -171,7 +171,7 @@ public partial class NodeStream : Stream
     /// <inheritdoc/>
     public override void Write(byte[] buffer, int offset, int count)
     {
-        var bytes = new JSTypedArray<byte>(buffer.AsMemory(offset, count));
+        var bytes = new JSUInt8Array(buffer.AsMemory(offset, count));
         bool drained = (bool)Value.CallMethod("write", bytes);
 
         if (!drained)
@@ -191,8 +191,8 @@ public partial class NodeStream : Stream
         int count,
         CancellationToken cancellation)
     {
-        var bytes = new JSTypedArray<byte>(buffer.AsMemory(offset, count));
-        bool drained = (bool)Value.CallMethod("write", bytes);
+        JSValueChecked bytes = (JSValue)new JSUInt8Array(buffer.AsMemory(offset, count));
+        bool drained = (bool)Value.CallMethod("write", bytes.Value);
 
         if (!drained)
         {
@@ -213,8 +213,8 @@ public partial class NodeStream : Stream
         ReadOnlyMemory<byte> buffer,
         CancellationToken cancellation = default)
     {
-        var bytes = new JSTypedArray<byte>(MemoryMarshal.AsMemory(buffer));
-        bool drained = (bool)Value.CallMethod("write", bytes);
+        JSValueChecked bytes = (JSValue)new JSUInt8Array(MemoryMarshal.AsMemory(buffer));
+        bool drained = (bool)Value.CallMethod("write", bytes.Value);
 
         if (!drained)
         {
@@ -254,8 +254,8 @@ public partial class NodeStream : Stream
     {
         if (disposing)
         {
-            JSValue? value = _valueReference.GetValue();
-            value?.CallMethod("destroy");
+            JSValueChecked? value = _valueReference.GetValueOptional();
+            value?.Value.CallMethod("destroy");
             _valueReference.Dispose();
         }
     }

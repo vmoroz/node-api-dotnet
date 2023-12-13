@@ -42,10 +42,15 @@ public class JSException : Exception
     {
         get
         {
-            JSValue? jsError = Error?.Value;
-            if (jsError is not null)
+            if (Error is JSError error)
             {
-                string jsStack = (string)jsError.Value["stack"];
+                JSValue jsError = error.Value;
+                if (jsError.IsUndefined())
+                {
+                    return base.StackTrace;
+                }
+
+                string jsStack = (string)jsError["stack"];
 
                 // The first line of the stack is the error type name and message,
                 // which is redundant when merged with the .NET exception.

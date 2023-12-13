@@ -41,13 +41,13 @@ public abstract class JSInterface
     /// <param name="args">Array of method arguments starting at index 1. Index 0 is reserved
     /// for the JS `this` value.</param>
     /// <remarks>
-    /// This method is used by the dynamically-emitted interface marshaling code.
+    /// This method is used by the dynamically-emitted interface marshalling code.
     /// </remarks>
     protected object? DynamicInvoke(Delegate interfaceMethod, object?[] args)
     {
         return ValueReference.Run((value) =>
         {
-            args[0] = new JSReference(value);
+            args[0] = value;
             return interfaceMethod.DynamicInvoke(args);
         });
     }
@@ -62,7 +62,7 @@ public abstract class JSInterface
     /// <param name="args">Array of method arguments starting at index 1. Index 0 is reserved
     /// for the JS `this` value.</param>
     /// <remarks>
-    /// This method is used by the dynamically-emitted interface marshaling code.
+    /// This method is used by the dynamically-emitted interface marshalling code.
     /// </remarks>
     protected object? DynamicInvoke(
         MethodInfo interfaceMethod,
@@ -71,7 +71,7 @@ public abstract class JSInterface
     {
         return ValueReference.Run((value) =>
         {
-            args[0] = new JSReference(value);
+            args[0] = value;
             Delegate interfaceMethodDelegate = delegateProvider(interfaceMethod);
             return interfaceMethodDelegate.DynamicInvoke(args);
         });

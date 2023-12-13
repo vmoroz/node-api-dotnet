@@ -49,7 +49,7 @@ public readonly struct JSCallbackOverload
 
     public static JSCallbackDescriptor CreateDescriptor(JSCallbackOverload[] overloads)
     {
-        return new JSCallbackDescriptor(ResolveAndInvoke, overloads);
+        return new JSCallbackDescriptor(args => ResolveAndInvoke(args).Value, overloads);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public readonly struct JSCallbackOverload
     /// a list of <see cref="JSCallbackOverload" /> entries is also provided via the
     /// <see cref="JSPropertyDescriptor.Data" /> property.
     /// </remarks>
-    public static JSValue ResolveAndInvoke(JSCallbackArgs args)
+    public static JSValueChecked ResolveAndInvoke(JSCallbackArgs args)
     {
         if (args.Data is not IReadOnlyList<JSCallbackOverload> overloads ||
             overloads.Count == 0)
