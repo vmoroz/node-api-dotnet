@@ -97,7 +97,7 @@ public partial class NodeStream
         {
             if (s_duplexStreamAdapterReference != null)
             {
-                return s_duplexStreamAdapterReference.GetValue()!.Value;
+                return s_duplexStreamAdapterReference.GetValue();
             }
 
             var streamAdapter = new JSObject
@@ -116,7 +116,7 @@ public partial class NodeStream
         {
             if (s_readableStreamAdapterReference != null)
             {
-                return s_readableStreamAdapterReference.GetValue()!.Value;
+                return s_readableStreamAdapterReference.GetValue();
             }
 
             var streamAdapter = new JSObject
@@ -132,7 +132,7 @@ public partial class NodeStream
         {
             if (s_writableStreamAdapterReference != null)
             {
-                return s_writableStreamAdapterReference.GetValue()!.Value;
+                return s_writableStreamAdapterReference.GetValue();
             }
 
             var streamAdapter = new JSObject
@@ -165,12 +165,12 @@ public partial class NodeStream
 
     private static async void ReadAsync(
         Stream stream,
-        JSValue nodeStream)
+        JSCheckedValue nodeStream)
     {
         // https://nodejs.org/api/stream.html#readable_readsize
 
         using var asyncScope = new JSAsyncScope();
-        using JSReference nodeStreamReference = new(nodeStream);
+        using JSReference nodeStreamReference = new(nodeStream.Value);
 
         byte[] buffer = ArrayPool<byte>.Shared.Rent(ReadChunkSize);
         try
@@ -181,16 +181,16 @@ public partial class NodeStream
             int count = await stream.ReadAsync(buffer.AsMemory(0, ReadChunkSize));
 #endif
 
-            nodeStream = nodeStreamReference.GetValue()!.Value;
-            nodeStream.CallMethod(
-                "push", count == 0 ? JSValue.Null : new JSTypedArray<byte>(buffer, 0, count));
+            nodeStream = nodeStreamReference.GetValue();
+            nodeStream.Value.CallMethod(
+                "push", count == 0 ? JSValue.Null : new JSUInt8Array(buffer, 0, count));
         }
         catch (Exception ex)
         {
             try
             {
-                nodeStream = nodeStreamReference.GetValue()!.Value;
-                nodeStream.CallMethod("destroy", new JSError(ex).Value);
+                nodeStream = nodeStreamReference.GetValue();
+                nodeStream.Value.CallMethod("destroy", new JSError(ex).Value);
             }
             catch (Exception)
             {
@@ -224,7 +224,7 @@ public partial class NodeStream
         Memory<byte> memory;
         try
         {
-            memory = ((JSTypedArray<byte>)chunk).Memory;
+            memory = ((JSUInt8Array)chunk).Memory;
         }
         catch (Exception ex)
         {
@@ -239,12 +239,12 @@ public partial class NodeStream
     private static async void WriteAsync(
         Stream stream,
         Memory<byte> chunk,
-        JSValue callback)
+        JSCheckedValue callback)
     {
         // https://nodejs.org/api/stream.html#writable_writechunk-encoding-callback
 
         using var asyncScope = new JSAsyncScope();
-        using JSReference callbackReference = new(callback);
+        using JSReference callbackReference = new(callback.Value);
         try
         {
 #if NETFRAMEWORK
@@ -253,16 +253,16 @@ public partial class NodeStream
             await stream.WriteAsync(chunk);
 #endif
 
-            callback = callbackReference.GetValue()!.Value;
-            callback.Call();
+            callback = callbackReference.GetValue();
+            callback.Value.Call();
         }
         catch (Exception ex)
         {
             bool isExceptionPending5 = JSNativeApi.IsExceptionPending();
             try
             {
-                callback = callbackReference.GetValue()!.Value;
-                callback.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
+                callback = callbackReference.GetValue();
+                callback.Value.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
             }
             catch (Exception)
             {
@@ -284,23 +284,23 @@ public partial class NodeStream
 
     private static async void FinalAsync(
         Stream stream,
-        JSValue callback)
+        JSCheckedValue callback)
     {
         using var asyncScope = new JSAsyncScope();
-        using JSReference callbackReference = new(callback);
+        using JSReference callbackReference = new(callback.Value);
         try
         {
             await stream.FlushAsync();
 
-            callback = callbackReference.GetValue()!.Value;
-            callback.Call();
+            callback = callbackReference.GetValue();
+            callback.Value.Call();
         }
         catch (Exception ex)
         {
             try
             {
-                callback = callbackReference.GetValue()!.Value;
-                callback.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
+                callback = callbackReference.GetValue();
+                callback.Value.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
             }
             catch (Exception)
             {

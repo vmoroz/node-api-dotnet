@@ -423,3 +423,113 @@ public readonly ref struct JSValue
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
     }
 }
+
+public readonly struct JSCheckedValue
+{
+    private readonly napi_value _handle = default;
+    private readonly JSValueScope? _scope = null;
+
+    public readonly JSValueScope Scope => _scope ?? JSValueScope.Current;
+
+    public JSValue Value => new(_handle, _scope);
+
+    internal JSRuntime Runtime => Scope.Runtime;
+
+    /// <summary>
+    /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
+    /// <see cref="JSValue.Undefined" /> when used in any scope.
+    /// </summary>
+    public JSCheckedValue() : this(default, null) { }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="JSValue" /> from a handle in the current scope.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the handle is null.</exception>
+    /// <remarks>
+    /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
+    /// may cause an attempt to access an invalid memory location.
+    /// </remarks>
+    public JSCheckedValue(napi_value handle) : this(handle, JSValueScope.Current) { }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when either the handle or scope is null
+    /// (unless they are both null then this becomes an empty value that implicitly converts
+    /// to <see cref="JSValue.Undefined"/>).</exception>
+    /// <remarks>
+    /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
+    /// may cause an attempt to access an invalid memory location.
+    /// </remarks>
+    public JSCheckedValue(napi_value handle, JSValueScope? scope)
+    {
+        if (scope is null)
+        {
+            if (!handle.IsNull) throw new ArgumentNullException(nameof(scope));
+        }
+        else
+        {
+            if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
+        }
+
+        _handle = handle;
+        _scope = scope;
+    }
+
+    /// <summary>
+    /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
+    /// <see cref="JSValue.Undefined" /> when used in any scope.
+    /// </summary>
+    public JSCheckedValue(JSValue value) : this(value.Handle, value.Scope) { }
+
+    public static implicit operator JSCheckedValue(JSValue value) => new(value.Handle);
+
+    public static explicit operator JSValue(JSCheckedValue value)
+        => new JSValue(value._handle, value.Scope);
+
+    public static explicit operator JSValue(JSCheckedValue? value)
+        => value is JSCheckedValue nonNullValue
+           ? new JSValue(nonNullValue._handle, nonNullValue.Scope)
+           : JSValue.Undefined;
+
+    internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
+
+    /// <summary>
+    /// Gets the value handle, or throws an exception if the value scope is disposed or
+    /// access from the current thread is invalid.
+    /// </summary>
+    /// <exception cref="JSValueScopeClosedException">The scope has been closed.</exception>
+    /// <exception cref="JSInvalidThreadAccessException">The scope is not valid on the current
+    /// thread.</exception>
+    public napi_value Handle
+    {
+        get
+        {
+            if (_scope == null)
+            {
+                // If the scope is null, this is an empty (uninitialized) instance.
+                // Implicitly convert to the JS `undefined` value.
+                return JSValue.Undefined.Handle;
+            }
+
+            // Ensure the scope is valid and on the current thread (environment).
+            _scope.ThrowIfDisposed();
+            _scope.ThrowIfInvalidThreadAccess();
+
+            // The handle must be non-null when the scope is non-null.
+            return _handle;
+        }
+    }
+
+    public override bool Equals([NotNullWhen(true)] object? obj)
+    {
+        // JSValue cannot be boxed.
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        throw new NotSupportedException(
+            "Hashing JS values is not supported. Use JSSet or JSMap instead.");
+    }
+}

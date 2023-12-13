@@ -223,20 +223,22 @@ public static partial class JSNativeApi
 
     public static unsafe void DefineProperties(this JSValue thisValue, IReadOnlyCollection<JSPropertyDescriptor> descriptors)
     {
+        JSCheckedValue self = thisValue;
         nint[] handles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
-            thisValue.Runtime.DefineProperties(
-                thisValue.UncheckedEnvironmentHandle, thisValue.Handle, descriptorsPtr)
+            self.Runtime.DefineProperties(
+                self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
                 .ThrowIfFailed());
-        Array.ForEach(handles, handle => thisValue.AddGCHandleFinalizer(handle));
+        Array.ForEach(handles, handle => self.Value.AddGCHandleFinalizer(handle));
     }
 
     public static unsafe void DefineProperties(this JSValue thisValue, params JSPropertyDescriptor[] descriptors)
     {
+        JSCheckedValue self = thisValue;
         nint[] handles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
-            thisValue.Runtime.DefineProperties(
-                thisValue.UncheckedEnvironmentHandle, thisValue.Handle, descriptorsPtr)
+            self.Runtime.DefineProperties(
+                self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
                 .ThrowIfFailed());
-        Array.ForEach(handles, handle => thisValue.AddGCHandleFinalizer(handle));
+        Array.ForEach(handles, handle => self.Value.AddGCHandleFinalizer(handle));
     }
 
     public static bool IsArray(this JSValue thisValue)
@@ -296,10 +298,18 @@ public static partial class JSNativeApi
 
     public static unsafe JSValue Call(
         this JSValue thisValue, JSValue thisArg, JSValueReadOnlySpan args)
-        => Call(thisValue, thisArg, new ReadOnlySpan<JSValue>(args));
+    {
+        return thisValue.Runtime.CallFunction(
+            thisValue.UncheckedEnvironmentHandle,
+            thisArg.Handle,
+            thisValue.Handle,
+            args.Span,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
 
     public static unsafe JSValue Call(
-        this JSValue thisValue, JSValue thisArg, ReadOnlySpan<JSValue> args)
+        this JSValue thisValue, JSValue thisArg, ReadOnlySpan<JSCheckedValue> args)
     {
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
@@ -362,17 +372,17 @@ public static partial class JSNativeApi
             .ThrowIfFailed(result);
     }
 
-    public static unsafe JSValue CallAsConstructor(this JSValue thisValue, params JSValue[] args)
-        => CallAsConstructor(thisValue, new ReadOnlySpan<JSValue>(args));
+    public static unsafe JSValue CallAsConstructor(this JSValue thisValue, params JSCheckedValue[] args)
+        => CallAsConstructor(thisValue, new ReadOnlySpan<JSCheckedValue>(args));
 
     public static unsafe JSValue CallAsConstructor(
-        this JSValue thisValue, ReadOnlySpan<JSValue> args)
+        this JSValue thisValue, ReadOnlySpan<JSCheckedValue> args)
     {
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
         {
-            argv[i] = args[i].Handle;
+            argv[i] = args[i].Value.Handle;
         }
 
         return thisValue.Runtime.NewInstance(
@@ -407,7 +417,7 @@ public static partial class JSNativeApi
         => thisValue.GetProperty(methodName).Call(thisValue, args);
 
     public static JSValue CallMethod(
-        this JSValue thisValue, JSValue methodName, ReadOnlySpan<JSValue> args)
+        this JSValue thisValue, JSValue methodName, ReadOnlySpan<JSCheckedValue> args)
         => thisValue.GetProperty(methodName).Call(thisValue, args);
 
     public static JSValue CallMethod(
@@ -441,7 +451,7 @@ public static partial class JSNativeApi
         params JSPropertyDescriptor[] propertyDescriptors)
     {
         GCHandle descriptorHandle = JSRuntimeContext.Current.AllocGCHandle(constructorDescriptor);
-        JSValue? func = null;
+        JSCheckedValue? func = null;
         napi_callback callback = new(
             Current?.ScopeType == JSValueScopeType.NoContext
             ? s_invokeJSCallbackNC : s_invokeJSCallback);
@@ -451,9 +461,9 @@ public static partial class JSNativeApi
         {
             func = DefineClass(name, callback, (nint)descriptorHandle, descriptorsPtr);
         });
-        func!.Value.AddGCHandleFinalizer((nint)descriptorHandle);
-        Array.ForEach(handles, handle => func!.Value.AddGCHandleFinalizer(handle));
-        return func!.Value;
+        func!.Value.Value.AddGCHandleFinalizer((nint)descriptorHandle);
+        Array.ForEach(handles, handle => func!.Value.Value.AddGCHandleFinalizer(handle));
+        return func!.Value.Value;
     }
 
     /// <summary>
@@ -1128,12 +1138,12 @@ public static partial class JSNativeApi
         foreach (JSPropertyDescriptor descriptor in descriptors)
         {
             ref napi_property_descriptor descriptorPtr = ref descriptorsPtr[i];
-            descriptorPtr.name = (napi_value)(descriptor.NameValue ?? (JSValue)descriptor.Name!);
+            descriptorPtr.name = (napi_value)(descriptor.NameValue.HasValue ? (JSValue)descriptor.NameValue.Value : (JSValue)descriptor.Name!);
             descriptorPtr.utf8name = default;
             descriptorPtr.method = descriptor.Method == null ? default : methodCallback;
             descriptorPtr.getter = descriptor.Getter == null ? default : getterCallback;
             descriptorPtr.setter = descriptor.Setter == null ? default : setterCallback;
-            descriptorPtr.value = (napi_value)descriptor.Value;
+            descriptorPtr.value = (napi_value)(JSValue)descriptor.Value;
             descriptorPtr.attributes = (napi_property_attributes)descriptor.Attributes;
             if (descriptor.Data != null ||
                 descriptor.Method != null ||

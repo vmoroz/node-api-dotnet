@@ -12,6 +12,8 @@ public readonly ref struct JSValueReadOnlySpan
 {
     private readonly ReadOnlySpan<napi_value> _span;
 
+    public ReadOnlySpan<napi_value> Span => _span;
+
     internal JSValueReadOnlySpan(JSValueScope scope, ReadOnlySpan<napi_value> span)
     {
         Scope = scope;

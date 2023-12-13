@@ -6,7 +6,7 @@ using Microsoft.JavaScript.NodeApi.Interop;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly ref struct JSPropertyDescriptor
+public readonly struct JSPropertyDescriptor
 {
     /// <summary>
     /// Saves the module context under which the callback was defined, so that multiple .NET
@@ -17,12 +17,12 @@ public readonly ref struct JSPropertyDescriptor
     // Either Name or NameValue should be non-null.
     // NameValue supports non-string property names like symbols.
     public string? Name { get; }
-    public JSValue NameValue { get; }
+    public JSCheckedValue? NameValue { get; }
 
     public JSCallbackFunc? Method { get; }
     public JSCallbackFunc? Getter { get; }
     public JSCallbackFunc? Setter { get; }
-    public JSValue Value { get; }
+    public JSCheckedValue? Value { get; }
     public JSPropertyAttributes Attributes { get; }
     public object? Data { get; }
 
