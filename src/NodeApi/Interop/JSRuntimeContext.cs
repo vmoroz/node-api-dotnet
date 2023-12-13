@@ -163,10 +163,10 @@ public sealed class JSRuntimeContext : IDisposable
     {
         get
         {
-            JSValue? value = _require?.GetValue();
-            if (value?.IsFunction() == true)
+            JSValue value = _require != null ? _require.GetValue() : JSValue.Undefined;
+            if (value.IsFunction() == true)
             {
-                return value.Value;
+                return value;
             }
 
             JSValue globalObject = JSValue.Global[GlobalObjectName];
@@ -199,9 +199,10 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS constructor.</returns>
     internal JSValue RegisterClass<T>(JSValue constructorFunction) where T : class
     {
+        JSCheckedValue ctor = constructorFunction;
         _classMap.AddOrUpdate(
             typeof(T),
-            (_) => new JSReference(constructorFunction, isWeak: false),
+            (_) => new JSReference(ctor.Value, isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Class already registered for JS export: " + typeof(T)));
         return constructorFunction;
@@ -216,9 +217,10 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS object.</returns>
     internal JSValue RegisterStaticClass(string name, JSValue classObject)
     {
+        JSCheckedValue cls = classObject;
         _staticClassMap.AddOrUpdate(
             name,
-            (_) => new JSReference(classObject, isWeak: false),
+            (_) => new JSReference(cls.Value, isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Class already registered for JS export: " + name));
         return classObject;
@@ -235,14 +237,14 @@ public sealed class JSRuntimeContext : IDisposable
                 "Class not registered for JS export: " + typeof(T));
         }
 
-        JSValue? constructorFunction = constructorReference!.GetValue();
-        if (!constructorFunction.HasValue)
+        JSValue constructorFunction = constructorReference.GetValue();
+        if (constructorFunction.IsUndefined())
         {
             // This should never happen because the reference is "strong".
             throw new InvalidOperationException("Failed to resolve class constructor reference.");
         }
 
-        return constructorFunction.Value;
+        return constructorFunction;
     }
 
     /// <summary>
@@ -492,9 +494,9 @@ public sealed class JSRuntimeContext : IDisposable
 
     private JSValue GetOrCreateCollectionProxy(
         object collection,
-        Func<JSValue> createWrapper)
+        JSCallbackFunc0 createWrapper)
     {
-        JSValue? wrapper = null;
+        JSCheckedValue? wrapper = null;
 
         _objectMap.AddOrUpdate(
             collection,
@@ -502,7 +504,7 @@ public sealed class JSRuntimeContext : IDisposable
             {
                 // No wrapper was found in the map for the object. Create a new one.
                 wrapper = createWrapper();
-                return new JSReference(wrapper.Value, isWeak: true);
+                return new JSReference((JSValue)wrapper, isWeak: true);
             },
             (_, wrapperReference) =>
             {
@@ -517,10 +519,10 @@ public sealed class JSRuntimeContext : IDisposable
                 // Create a new wrapper JS object and update the reference in the map.
                 wrapperReference.Dispose();
                 wrapper = createWrapper();
-                return new JSReference(wrapper.Value, isWeak: true);
+                return new JSReference((JSValue)wrapper, isWeak: true);
             });
 
-        return wrapper!.Value;
+        return (JSValue)wrapper;
     }
 
     /// <summary>

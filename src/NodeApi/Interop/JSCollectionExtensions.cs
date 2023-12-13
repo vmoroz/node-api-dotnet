@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 
 namespace Microsoft.JavaScript.NodeApi.Interop;
 
-// TODO: (vmoroz) Fix
-#if false
 public static class JSCollectionExtensions
 {
     /// <summary>
@@ -239,7 +237,7 @@ internal class JSAsyncIterableEnumerable<T> : IAsyncEnumerable<T>, IEquatable<JS
 #pragma warning restore IDE0060
 }
 
-internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSValue>, IDisposable
+internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSCheckedValue>, IDisposable
 {
     internal JSIterableEnumerable(JSValue iterable, JSValue.To<T> fromJS)
     {
@@ -249,9 +247,9 @@ internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSValue>, ID
 
     private readonly JSReference _iterableReference;
 
-    public JSValue Value => _iterableReference.GetValue()!.Value;
+    public JSValue Value => _iterableReference.GetValue();
 
-    bool IEquatable<JSValue>.Equals(JSValue other) => Value.Equals(other);
+    bool IEquatable<JSCheckedValue>.Equals(JSCheckedValue other) => Value.Equals(other);
 
     protected JSValue.To<T> FromJS { get; }
 
@@ -477,7 +475,7 @@ internal class JSSetSet<T> : JSSetCollection<T>, ISet<T>
 }
 
 internal class JSMapReadOnlyDictionary<TKey, TValue> :
-    IReadOnlyDictionary<TKey, TValue>, IEquatable<JSValue>, IDisposable
+    IReadOnlyDictionary<TKey, TValue>, IEquatable<JSCheckedValue>, IDisposable
 {
     internal JSMapReadOnlyDictionary(
         JSValue map,
@@ -493,9 +491,9 @@ internal class JSMapReadOnlyDictionary<TKey, TValue> :
 
     private readonly JSReference _mapReference;
 
-    public JSValue Value => _mapReference.GetValue()!.Value;
+    public JSValue Value => _mapReference.GetValue();
 
-    bool IEquatable<JSValue>.Equals(JSValue other) => Value.Equals(other);
+    bool IEquatable<JSCheckedValue>.Equals(JSCheckedValue other) => Value.Equals(other);
 
     protected JSValue.To<TKey> KeyFromJS { get; }
     protected JSValue.To<TValue> ValueFromJS { get; }
@@ -542,7 +540,7 @@ internal class JSMapReadOnlyDictionary<TKey, TValue> :
 
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
     {
-        foreach (KeyValuePair<JSValue, JSValue> pair in (JSMap)Value)
+        foreach (JSValueKeyValuePair pair in (JSMap)Value)
         {
             yield return new KeyValuePair<TKey, TValue>(
                 KeyFromJS(pair.Key), ValueFromJS(pair.Value));
@@ -648,4 +646,3 @@ internal class JSMapDictionary<TKey, TValue> :
         => TryGetValue(item.Key, out TValue? value) &&
             (item.Value?.Equals(value) ?? value == null) && Remove(item.Key);
 }
-#endif
