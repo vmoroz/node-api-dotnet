@@ -158,6 +158,27 @@ public class JSEventEmitter : IDisposable
         }
     }
 
+    public void Emit(string eventName, params JSValueChecked[] args)
+    {
+        switch (args.Length)
+        {
+            case 0:
+                Emit(eventName);
+                break;
+            case 1:
+                Emit(eventName, (JSValue)args[0]);
+                break;
+            default:
+                Span<napi_value> argSpan = stackalloc napi_value[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                {
+                    argSpan[i] = args[i].Handle;
+                }
+                Emit(eventName, new JSValueReadOnlySpan(JSValueScope.Current, argSpan));
+                break;
+        }
+    }
+
     public void Emit(string eventName, JSValueReadOnlySpan args)
     {
         if (_nodeEmitter != null)

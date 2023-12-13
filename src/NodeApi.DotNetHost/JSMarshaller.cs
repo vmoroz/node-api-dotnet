@@ -30,7 +30,7 @@ namespace Microsoft.JavaScript.NodeApi.DotNetHost;
 public class JSMarshaller
 {
     /// <summary>
-    /// Prefix applied to the the name of out parameters when building expressions. Expressions
+    /// Prefix applied to the name of out parameters when building expressions. Expressions
     /// do not distinguish between ref and out parameters, but the source generator needs to use
     /// the correct keyword.
     /// </summary>
@@ -575,7 +575,7 @@ public class JSMarshaller
             {
                 callExpression = Expression.Call(
                     typeof(JSNativeApi).GetStaticMethod(nameof(JSNativeApi.CallMethod),
-                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValue[]) }),
+                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValueChecked[]) }),
                     new Expression[]
                     {
                         thisParameter,
@@ -742,7 +742,7 @@ public class JSMarshaller
             {
                 callExpression = Expression.Call(
                     typeof(JSNativeApi).GetStaticMethod(nameof(JSNativeApi.Call),
-                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValue[]) }),
+                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValueChecked[]) }),
                     new Expression[]
                     {
                         thisParameter,
@@ -1897,26 +1897,28 @@ public class JSMarshaller
             Type[]? genericArguments = toType.IsGenericType ?
                 toType.GetGenericArguments() : null;
 
-            if (genericTypeDefinition == typeof(Memory<>) ||
-                genericTypeDefinition == typeof(ReadOnlyMemory<>))
-            {
-                Type elementType = toType.GenericTypeArguments[0];
-                if (!IsTypedArrayType(elementType))
-                {
-                    throw new NotSupportedException(
-                        $"Typed-array element type not supported: {elementType}");
-                }
+            // TODO: (vmoroz) Fix
+            //if (genericTypeDefinition == typeof(Memory<>) ||
+            //    genericTypeDefinition == typeof(ReadOnlyMemory<>))
+            //{
+            //    Type elementType = toType.GenericTypeArguments[0];
+            //    if (!IsTypedArrayType(elementType))
+            //    {
+            //        throw new NotSupportedException(
+            //            $"Typed-array element type not supported: {elementType}");
+            //    }
 
-                Type typedArrayType = typeof(JSTypedArray<>).MakeGenericType(elementType);
-                MethodInfo asTypedArray = typedArrayType.GetExplicitConversion(
-                    typeof(JSValue), typedArrayType);
-                PropertyInfo memory = typedArrayType.GetInstanceProperty("Memory");
-                statements = new[]
-                {
-                    Expression.Property(Expression.Call(asTypedArray, valueParameter), memory),
-                };
-            }
-            else if (genericTypeDefinition == typeof(KeyValuePair<,>))
+            //    Type typedArrayType = typeof(JSTypedArray<>).MakeGenericType(elementType);
+            //    MethodInfo asTypedArray = typedArrayType.GetExplicitConversion(
+            //        typeof(JSValue), typedArrayType);
+            //    PropertyInfo memory = typedArrayType.GetInstanceProperty("Memory");
+            //    statements = new[]
+            //    {
+            //        Expression.Property(Expression.Call(asTypedArray, valueParameter), memory),
+            //    };
+            //}
+            //else
+            if (genericTypeDefinition == typeof(KeyValuePair<,>))
             {
                 /*
                  * new KeyValuePair<TKey, TValue>((TKey)value[0], (TValue)value[1])
@@ -2166,26 +2168,28 @@ public class JSMarshaller
             Type[]? genericArguments = fromType.IsGenericType ?
                 fromType.GetGenericArguments() : null;
 
-            if (genericTypeDefinition == typeof(Memory<>) ||
-                genericTypeDefinition == typeof(ReadOnlyMemory<>))
-            {
-                Type elementType = fromType.GenericTypeArguments[0];
-                if (!IsTypedArrayType(elementType))
-                {
-                    throw new NotSupportedException(
-                        $"Typed-array element type not supported: {elementType}");
-                }
+            // TODO: (vmoroz) Fix
+            //if (genericTypeDefinition == typeof(Memory<>) ||
+            //    genericTypeDefinition == typeof(ReadOnlyMemory<>))
+            //{
+            //    Type elementType = fromType.GenericTypeArguments[0];
+            //    if (!IsTypedArrayType(elementType))
+            //    {
+            //        throw new NotSupportedException(
+            //            $"Typed-array element type not supported: {elementType}");
+            //    }
 
-                Type typedArrayType = typeof(JSTypedArray<>).MakeGenericType(elementType);
-                ConstructorInfo constructor = typedArrayType.GetConstructor(new[] { fromType })!;
-                MethodInfo asJSValue = typedArrayType.GetImplicitConversion(
-                    typedArrayType, typeof(JSValue));
-                statements = new[]
-                {
-                    Expression.Call(asJSValue, Expression.New(constructor, valueParameter)),
-                };
-            }
-            else if (genericTypeDefinition == typeof(KeyValuePair<,>))
+            //    Type typedArrayType = typeof(JSTypedArray<>).MakeGenericType(elementType);
+            //    ConstructorInfo constructor = typedArrayType.GetConstructor(new[] { fromType })!;
+            //    MethodInfo asJSValue = typedArrayType.GetImplicitConversion(
+            //        typedArrayType, typeof(JSValue));
+            //    statements = new[]
+            //    {
+            //        Expression.Call(asJSValue, Expression.New(constructor, valueParameter)),
+            //    };
+            //}
+            //else
+            if (genericTypeDefinition == typeof(KeyValuePair<,>))
             {
                 /*
                  * new JSArray(new JSValue[] { (JSValue)value.Key, (JSValue)value.Value })
@@ -2194,7 +2198,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 InlineOrInvoke(
                                     BuildConvertToJSValueExpression(genericArguments![0]),
@@ -2230,7 +2234,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 genericArguments!.Select((_, i) =>  TupleItem(i)).ToArray())),
                         typeof(JSValue)),
@@ -2299,7 +2303,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 genericArguments!.Select((_, i) =>  TupleItem(i)).ToArray())),
                         typeof(JSValue)),
@@ -2501,7 +2505,7 @@ public class JSMarshaller
         LambdaExpression fromJSExpression = GetFromJSValueExpression(elementType);
         MethodInfo arrayCopyMethod = typeof(JSArray)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where((m) => m.IsGenericMethodDefinition && m.Name == nameof(JSArray.CopyTo))
+            .Where((m) => m.IsGenericMethodDefinition && m.Name == "nameof(JSArray.CopyTo)") // TODO: (vmoroz) Fix
             .Single().MakeGenericMethod(elementType);
         yield return Expression.Call(
             jsArrayVariable,
@@ -2533,7 +2537,7 @@ public class JSMarshaller
             Expression.New(jsArrayConstructor,
                 Expression.Property(valueExpression, arrayLengthProperty)));
 
-        MethodInfo arrayCopyMethod = typeof(JSArray).GetInstanceMethod(nameof(JSArray.CopyFrom))
+        MethodInfo arrayCopyMethod = typeof(JSArray).GetInstanceMethod("nameof(JSArray.CopyFrom)") // TODO: (vmoroz) Fix
             .MakeGenericMethod(elementType);
         yield return Expression.Call(
             jsArrayVariable,
@@ -3130,22 +3134,24 @@ Call(
             "ValueReference", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
         // Use the JSReference.Run() method to switch to the JS thread when operating on the value.
-        Type runDelegateType;
-        MethodInfo runMethod;
-        if (returnType == typeof(void))
-        {
-            runDelegateType = typeof(Action<JSValue>);
-            runMethod = typeof(JSReference).GetInstanceMethod(
-                nameof(JSReference.Run), new[] { typeof(Action<JSValue>) });
-        }
-        else
-        {
-            runDelegateType = typeof(Func<,>).MakeGenericType(typeof(JSValue), returnType);
-            runMethod = typeof(JSReference)
-                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Single((m) => m.Name == nameof(JSReference.Run) && m.IsGenericMethodDefinition)
-                .MakeGenericMethod(returnType);
-        }
+        //TODO: (vmoroz) Fix
+        Type runDelegateType = typeof(void);
+        MethodInfo runMethod = typeof(JSReference).GetInstanceMethod(
+                nameof(JSReference.Run), new[] { typeof(Action<JSValueChecked>) });
+        //if (returnType == typeof(void))
+        //{
+        //    runDelegateType = typeof(Action<JSValue>);
+        //    runMethod = typeof(JSReference).GetInstanceMethod(
+        //        nameof(JSReference.Run), new[] { typeof(Action<JSValue>) });
+        //}
+        //else
+        //{
+        //    runDelegateType = typeof(Func<,>).MakeGenericType(typeof(JSValue), returnType);
+        //    runMethod = typeof(JSReference)
+        //        .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+        //        .Single((m) => m.Name == nameof(JSReference.Run) && m.IsGenericMethodDefinition)
+        //        .MakeGenericMethod(returnType);
+        //}
 
         // Build a lambda expression that moves the __this parameter from the original lambda
         // to the inner lambda where the parameter is supplied by the Run() callback.

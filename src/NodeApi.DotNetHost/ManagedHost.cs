@@ -287,7 +287,7 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
         }
 
         Trace($"    Resolving assembly: {assemblyName} {assemblyVersion}");
-        Emit(ResolvingEventName, assemblyName, assemblyVersion!);
+        Emit(ResolvingEventName, (JSValue)assemblyName, (JSValue)assemblyVersion!);
 
         // Resolve listeners may call load(assemblyFilePath) to load the requested assembly.
         // The version of the loaded assembly might not match the requested version.
@@ -339,7 +339,7 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
         if (_loadedModules.TryGetValue(assemblyFilePath, out JSReference? exportsRef))
         {
             Trace("< ManagedHost.LoadModule() => already loaded");
-            return exportsRef.GetValue()!.Value;
+            return exportsRef.GetValue();
         }
 
         Assembly assembly;
@@ -554,7 +554,7 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
             if (!_exportedNamespaces.TryGetValue(namespaceParts[0], out Namespace? parentNamespace))
             {
                 parentNamespace = new Namespace(namespaceParts[0], _typeExporter.TryExportType);
-                _exports.GetValue()!.Value.SetProperty(namespaceParts[0], parentNamespace.Value);
+                _exports.GetValue().SetProperty(namespaceParts[0], parentNamespace.Value);
                 _exportedNamespaces.Add(namespaceParts[0], parentNamespace);
             }
 

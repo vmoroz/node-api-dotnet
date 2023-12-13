@@ -43,7 +43,7 @@ internal class Namespace
     /// <summary>
     /// Gets the JS object value that is a projection of the namespace to JS.
     /// </summary>
-    public JSValue Value => _valueReference.GetValue()!.Value;
+    public JSValue Value => _valueReference.GetValue();
 
     /// <summary>
     /// Gets all the known child namespaces of this namespace, indexed by child name
@@ -84,7 +84,7 @@ internal class Namespace
             if (propertyName == "toString")
             {
                 // Calling `toString()` on a namespace returns the full namespace name.
-                return _tostringReference.GetValue()!.Value;
+                return _tostringReference.GetValue();
             }
             else if (Namespaces.TryGetValue(propertyName, out Namespace? ns))
             {
@@ -104,7 +104,7 @@ internal class Namespace
             }
 
             // The reference here may be null if the type could not be exported for some reason.
-            return jsTypeRef?.GetValue()!.Value ?? default;
+            return (JSValue)jsTypeRef;
         },
 
         OwnKeys = (JSObject target) =>
@@ -153,7 +153,7 @@ internal class Namespace
             {
                 ["enumerable"] = true,
                 ["configurable"] = true,
-                ["value"] = jsTypeRef?.GetValue()!.Value ?? default,
+                ["value"] = (JSValue)jsTypeRef,
             };
         },
     };

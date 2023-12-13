@@ -135,6 +135,13 @@ public class JSReference : IDisposable
         return result;
     }
 
+    public JSValueChecked? GetValueChecked()
+    {
+        JSValueScope.CurrentRuntime.GetReferenceValue(Env, _handle, out napi_value result)
+            .ThrowIfFailed();
+        return result.IsNull ? null : new JSValueChecked(result);
+    }
+
     public JSValueChecked? GetValueOptional()
     {
         JSValueScope.CurrentRuntime.GetReferenceValue(Env, _handle, out napi_value result)
@@ -265,4 +272,8 @@ public class JSReference : IDisposable
     }
 
     ~JSReference() => Dispose(disposing: false);
+
+    public static explicit operator JSValue(JSReference? reference)
+        => reference is JSReference r ? r.GetValue() : JSValue.Undefined;
+
 }

@@ -144,7 +144,7 @@ internal class TypeExporter
         string defineMethodName = type.IsInterface ? "DefineInterface" :
             isStatic ? "DefineStaticClass" : type.IsValueType ? "DefineStruct" : "DefineClass";
         MethodInfo defineClassMethod = classBuilderType.GetInstanceMethod(defineMethodName);
-        JSValue classObject = (JSValue)defineClassMethod.Invoke(
+        JSValue classObject = (JSValue)(JSValueChecked)defineClassMethod.Invoke(
             classBuilder,
             defineClassMethod.GetParameters().Select((_) => (object?)null).ToArray())!;
 
@@ -399,7 +399,7 @@ internal class TypeExporter
         }
         else
         {
-            // Set up overload resolution for multiple methods or optional parmaeters.
+            // Set up overload resolution for multiple methods or optional parameters.
             Trace($"    {(methodIsStatic ? "static " : string.Empty)}{methodName}[" +
                 methods.Length + "]");
             foreach (MethodInfo method in methods)
@@ -437,7 +437,7 @@ internal class TypeExporter
                     new object[]
                     {
                         nestedType.Name,
-                        nestedTypeReference.GetValue()!.Value,
+                        nestedTypeReference.GetValueChecked()!.Value,
                         propertyAttributes,
                     });
             }
@@ -592,7 +592,7 @@ internal class TypeExporter
         }
 
         JSReference exportedTypeReference = ExportType(genericType);
-        return exportedTypeReference.GetValue()!.Value;
+        return exportedTypeReference.GetValue();
     }
 
     private void ExportGenericMethodDefinition(object classBuilder, MethodInfo[] methods)

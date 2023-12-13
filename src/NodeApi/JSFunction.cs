@@ -299,9 +299,20 @@ public readonly ref struct JSFunction
     /// optionally the specified sequence of arguments preceding any provided when the
     /// new function is called.
     /// </summary>
-    //TODO: (vmoroz)
-    //public JSFunction Bind(JSCallbackArgs args)
-    //    =>  (JSFunction)_value.CallMethod("bind", args);
+    public JSFunction Bind(JSValue thisArg, params JSValueChecked[] args)
+    {
+        if (args.Length == 0)
+        {
+            return (JSFunction)_value.CallMethod("bind", thisArg);
+        }
+        else
+        {
+            JSValueChecked[] thisAndArgs = new JSValueChecked[1 + args.Length];
+            thisAndArgs[0] = thisArg;
+            args.CopyTo(thisAndArgs, 1);
+            return (JSFunction)_value.CallMethod("bind", thisAndArgs);
+        }
+    }
 
     public JSValue Call(JSValue thisArg) => _value.Call(thisArg);
 
