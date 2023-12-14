@@ -562,6 +562,10 @@ public readonly struct JSValueChecked
         }
     }
 
+    public JSFunction AsFunction() => new(new JSValue(Handle, Scope));
+
+    public JSObject AsObject() => new(new JSValue(Handle, Scope));
+
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
         // JSValue cannot be boxed.

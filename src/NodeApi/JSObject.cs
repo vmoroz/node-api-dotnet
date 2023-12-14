@@ -14,7 +14,7 @@ public readonly ref partial struct JSObject
     public static explicit operator JSObject(JSValue value) => new(value);
     public static implicit operator JSValue(JSObject obj) => obj._value;
 
-    private JSObject(JSValue value)
+    internal JSObject(JSValue value)
     {
         _value = value;
     }

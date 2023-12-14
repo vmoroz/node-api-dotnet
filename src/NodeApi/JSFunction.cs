@@ -13,10 +13,11 @@ public readonly ref struct JSFunction
 {
     private readonly JSValue _value;
 
+    public static explicit operator JSFunction(JSValueChecked value) => new(value.Value);
     public static explicit operator JSFunction(JSValue value) => new(value);
     public static implicit operator JSValue(JSFunction function) => function._value;
 
-    private JSFunction(JSValue value)
+    internal JSFunction(JSValue value)
     {
         _value = value;
     }
@@ -340,8 +341,7 @@ public readonly ref struct JSFunction
     public JSValue CallAsStatic(JSValue arg0, JSValue arg1, JSValue arg2)
         => _value.Call(thisArg: default, arg0, arg1, arg2);
 
-    //TODO: (vmoroz)
-    //public JSValue CallAsStatic(params JSValue[] args) => _value.Call(thisArg: default, args);
+    public JSValue CallAsStatic(params JSValueChecked[] args) => _value.Call(thisArg: default, args);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.

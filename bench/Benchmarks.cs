@@ -51,17 +51,17 @@ public abstract class Benchmarks
         "libnode" + GetSharedLibraryExtension());
 
     private napi_env _env;
-    private JSFunction _jsFunction;
-    private JSFunction _jsFunctionWithArgs;
-    private JSFunction _jsFunctionWithCallback;
-    private JSObject _jsInstance;
-    private JSFunction _dotnetFunction;
-    private JSFunction _dotnetFunctionWithArgs;
-    private JSObject _dotnetClass;
-    private JSObject _dotnetInstance;
-    private JSFunction _jsFunctionCreateInstance;
-    private JSFunction _jsFunctionCallMethod;
-    private JSFunction _jsFunctionCallMethodWithArgs;
+    private JSValueChecked _jsFunction;
+    private JSValueChecked _jsFunctionWithArgs;
+    private JSValueChecked _jsFunctionWithCallback;
+    private JSValueChecked _jsInstance;
+    private JSValueChecked _dotnetFunction;
+    private JSValueChecked _dotnetFunctionWithArgs;
+    private JSValueChecked _dotnetClass;
+    private JSValueChecked _dotnetInstance;
+    private JSValueChecked _jsFunctionCreateInstance;
+    private JSValueChecked _jsFunctionCallMethod;
+    private JSValueChecked _jsFunctionCallMethodWithArgs;
     private JSReference _reference = null!;
 
     /// <summary>
@@ -95,18 +95,18 @@ public abstract class Benchmarks
 
         // Create some JS values that will be used by the benchmarks.
 
-        _jsFunction = (JSFunction)JSNativeApi.RunScript("function jsFunction() { }; jsFunction");
-        _jsFunctionWithArgs = (JSFunction)JSNativeApi.RunScript(
+        _jsFunction = JSNativeApi.RunScript("function jsFunction() { }; jsFunction");
+        _jsFunctionWithArgs = JSNativeApi.RunScript(
             "function jsFunctionWithArgs(a, b, c) { }; jsFunctionWithArgs");
-        _jsFunctionWithCallback = (JSFunction)JSNativeApi.RunScript(
+        _jsFunctionWithCallback = JSNativeApi.RunScript(
             "function jsFunctionWithCallback(cb, ...args) { cb(...args); }; " +
             "jsFunctionWithCallback");
-        _jsInstance = (JSObject)JSNativeApi.RunScript(
+        _jsInstance = JSNativeApi.RunScript(
             "const jsInstance = { method: (...args) => {} }; jsInstance");
 
-        _dotnetFunction = (JSFunction)JSValue.CreateFunction(
+        _dotnetFunction = JSValue.CreateFunction(
             "dotnetFunction", (args) => JSValue.Undefined);
-        _dotnetFunctionWithArgs = (JSFunction)JSValue.CreateFunction(
+        _dotnetFunctionWithArgs = JSValue.CreateFunction(
             "dotnetFunctionWithArgs", (args) =>
             {
                 for (int i = 0; i < args.Length; i++)
@@ -121,24 +121,24 @@ public abstract class Benchmarks
             nameof(DotnetClass), () => new DotnetClass());
         classBuilder.AddProperty(
             "property",
-            (x) => x.Property,
-            (x, value) => x.Property = (string)value);
+            (DotnetClass x) => (JSValueChecked)(JSValue)x.Property,
+            (DotnetClass x, JSValueChecked value) => x.Property = (string)(JSValue)value);
         classBuilder.AddMethod("method", (x) => (args) => DotnetClass.Method());
-        _dotnetClass = (JSObject)classBuilder.DefineClass();
-        _dotnetInstance = (JSObject)JSNativeApi.CallAsConstructor(_dotnetClass);
+        _dotnetClass = classBuilder.DefineClass(JSValue.Undefined);
+        _dotnetInstance = JSNativeApi.CallAsConstructor((JSValue)_dotnetClass);
 
-        _jsFunctionCreateInstance = (JSFunction)JSNativeApi.RunScript(
+        _jsFunctionCreateInstance = JSNativeApi.RunScript(
             "function jsFunctionCreateInstance(Class) { new Class() }; " +
             "jsFunctionCreateInstance");
-        _jsFunctionCallMethod = (JSFunction)JSNativeApi.RunScript(
+        _jsFunctionCallMethod = JSNativeApi.RunScript(
             "function jsFunctionCallMethod(instance) { instance.method(); }; " +
             "jsFunctionCallMethod");
-        _jsFunctionCallMethodWithArgs = (JSFunction)JSNativeApi.RunScript(
+        _jsFunctionCallMethodWithArgs = JSNativeApi.RunScript(
             "function jsFunctionCallMethodWithArgs(instance, ...args) " +
             "{ instance.method(...args); }; " +
             "jsFunctionCallMethodWithArgs");
 
-        _reference = new JSReference(_jsFunction);
+        _reference = new JSReference(_jsFunction.Value);
     }
 
     private static JSValueScope NewJSScope() => new(JSValueScopeType.Callback);
@@ -148,19 +148,19 @@ public abstract class Benchmarks
     [Benchmark]
     public void CallJSFunction()
     {
-        _jsFunction.CallAsStatic();
+        _jsFunction.AsFunction().CallAsStatic();
     }
 
     [Benchmark]
     public void CallJSFunctionWithArgs()
     {
-        _jsFunctionWithArgs.CallAsStatic("1", "2", "3");
+        _jsFunctionWithArgs.AsFunction().CallAsStatic("1", "2", "3");
     }
 
     [Benchmark]
     public void CallJSMethod()
     {
-        _jsInstance.CallMethod("method");
+        _jsInstance.AsObject().CallMethod("method");
     }
 
     [Benchmark]
@@ -172,52 +172,53 @@ public abstract class Benchmarks
     [Benchmark]
     public void CallDotnetFunction()
     {
-        _jsFunctionWithCallback.CallAsStatic(_dotnetFunction);
+        _jsFunctionWithCallback.AsFunction().CallAsStatic(_dotnetFunction);
     }
 
     [Benchmark]
     public void CallDotnetFunctionWithArgs()
     {
-        _jsFunctionWithCallback.CallAsStatic(_dotnetFunctionWithArgs, "1", "2", "3");
+        _jsFunctionWithCallback.AsFunction().CallAsStatic(_dotnetFunctionWithArgs, "1", "2", "3");
     }
 
     [Benchmark]
     public void CallDotnetConstructor()
     {
-        _jsFunctionCreateInstance.CallAsStatic(_dotnetClass);
+        _jsFunctionCreateInstance.AsFunction().CallAsStatic(_dotnetClass);
     }
 
     [Benchmark]
     public void CallDotnetMethod()
     {
-        _jsFunctionCallMethod.CallAsStatic(_dotnetInstance);
+        _jsFunctionCallMethod.AsFunction().CallAsStatic(_dotnetInstance);
     }
 
     [Benchmark]
     public void CallDotnetMethodWithArgs()
     {
-        _jsFunctionCallMethodWithArgs.CallAsStatic(_dotnetInstance, "1", "2", "3");
+        _jsFunctionCallMethodWithArgs.AsFunction().CallAsStatic(
+            _dotnetInstance.Value, "1", "2", "3");
     }
 
     [Benchmark]
     public void ReferenceGet()
     {
-        _ = _reference.GetValue()!.Value;
+        _ = _reference.GetValue();
     }
 
     [Benchmark]
-    public void ReferenceCreateAndDipose()
+    public void ReferenceCreateAndDispose()
     {
-        using JSReference reference = new(_jsFunction);
+        using JSReference reference = new(_jsFunction.Value);
     }
 
     [ShortRunJob]
     [MemoryDiagnoser(displayGenColumns: false)]
     public class Clr : Benchmarks
     {
-        private JSObject _jsHost;
-        private JSFunction _jsFunctionCallMethodDynamic;
-        private JSFunction _jsFunctionCallMethodDynamicInterface;
+        private JSValueChecked _jsHost;
+        private JSValueChecked _jsFunctionCallMethodDynamic;
+        private JSValueChecked _jsFunctionCallMethodDynamicInterface;
 
         [GlobalSetup]
         public new void Setup()
@@ -228,14 +229,14 @@ public abstract class Benchmarks
 
             JSObject hostModule = new();
             _ = new ManagedHost(hostModule);
-            _jsHost = hostModule;
-            _jsFunctionCallMethodDynamic = (JSFunction)JSNativeApi.RunScript(
+            _jsHost = (JSValue)hostModule;
+            _jsFunctionCallMethodDynamic = JSNativeApi.RunScript(
                 "function jsFunctionCallMethodDynamic(dotnet) " +
                 "{ dotnet.System.Object.ReferenceEquals(null, null); }; " +
                 "jsFunctionCallMethodDynamic");
 
             // Implement IFormatProvider in JS and pass it to a .NET method.
-            _jsFunctionCallMethodDynamicInterface = (JSFunction)JSNativeApi.RunScript(
+            _jsFunctionCallMethodDynamicInterface = JSNativeApi.RunScript(
                 "function jsFunctionCallMethodDynamicInterface(dotnet)  {" +
                 "    const formatProvider = { GetFormat: (type) => null };" +
                 "    dotnet.System.String.Format(formatProvider, '', null, null);" +
@@ -248,13 +249,13 @@ public abstract class Benchmarks
         [Benchmark]
         public void DynamicCallDotnetMethod()
         {
-            _jsFunctionCallMethodDynamic.CallAsStatic(_jsHost);
+            _jsFunctionCallMethodDynamic.AsFunction().CallAsStatic(_jsHost);
         }
 
         [Benchmark]
         public void DynamicCallDotnetMethodWithInterface()
         {
-            _jsFunctionCallMethodDynamicInterface.CallAsStatic(_jsHost);
+            _jsFunctionCallMethodDynamicInterface.AsFunction().CallAsStatic(_jsHost);
         }
     }
 
