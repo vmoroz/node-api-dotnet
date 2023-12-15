@@ -165,7 +165,7 @@ public partial class NodeStream
 
     private static async void ReadAsync(
         Stream stream,
-        JSValueChecked nodeStream)
+        JSValue.Checked nodeStream)
     {
         // https://nodejs.org/api/stream.html#readable_readsize
 
@@ -239,7 +239,7 @@ public partial class NodeStream
     private static async void WriteAsync(
         Stream stream,
         Memory<byte> chunk,
-        JSValueChecked callback)
+        JSValue.Checked callback)
     {
         // https://nodejs.org/api/stream.html#writable_writechunk-encoding-callback
 
@@ -284,7 +284,7 @@ public partial class NodeStream
 
     private static async void FinalAsync(
         Stream stream,
-        JSValueChecked callback)
+        JSValue.Checked callback)
     {
         using var asyncScope = new JSAsyncScope();
         using JSReference callbackReference = new(callback.Value);

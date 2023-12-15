@@ -41,13 +41,13 @@ public interface ITestObject
 
 public abstract class TestHelper
 {
-    public static KeyValuePair<JSValueChecked, JSValueChecked> Method(
+    public static KeyValuePair<JSValue.Checked, JSValue.Checked> Method(
         JSCallbackFunc callback,
         [CallerArgumentExpression(nameof(callback))] string callbackName = "")
     {
         string name = callbackName ?? string.Empty;
         name = name.Substring(name.IndexOf('.') + 1);
-        return new KeyValuePair<JSValueChecked, JSValueChecked>(
+        return new KeyValuePair<JSValue.Checked, JSValue.Checked>(
             ToCamelCase(name), JSValue.CreateFunction(name, callback));
     }
 

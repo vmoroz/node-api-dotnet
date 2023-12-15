@@ -575,7 +575,7 @@ public class JSMarshaller
             {
                 callExpression = Expression.Call(
                     typeof(JSNativeApi).GetStaticMethod(nameof(JSNativeApi.CallMethod),
-                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValueChecked[]) }),
+                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValue.Checked[]) }),
                     new Expression[]
                     {
                         thisParameter,
@@ -742,7 +742,7 @@ public class JSMarshaller
             {
                 callExpression = Expression.Call(
                     typeof(JSNativeApi).GetStaticMethod(nameof(JSNativeApi.Call),
-                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValueChecked[]) }),
+                         new[] { typeof(JSValue), typeof(JSValue), typeof(JSValue.Checked[]) }),
                     new Expression[]
                     {
                         thisParameter,
@@ -2198,7 +2198,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue.Checked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 InlineOrInvoke(
                                     BuildConvertToJSValueExpression(genericArguments![0]),
@@ -2234,7 +2234,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue.Checked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 genericArguments!.Select((_, i) =>  TupleItem(i)).ToArray())),
                         typeof(JSValue)),
@@ -2303,7 +2303,7 @@ public class JSMarshaller
                 {
                     Expression.Convert(
                         Expression.New(
-                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValueChecked[]) }),
+                            typeof(JSArray).GetInstanceConstructor(new[] { typeof(JSValue.Checked[]) }),
                             Expression.NewArrayInit(typeof(JSValue),
                                 genericArguments!.Select((_, i) =>  TupleItem(i)).ToArray())),
                         typeof(JSValue)),
@@ -3137,7 +3137,7 @@ Call(
         //TODO: (vmoroz) Fix
         Type runDelegateType = typeof(void);
         MethodInfo runMethod = typeof(JSReference).GetInstanceMethod(
-                nameof(JSReference.Run), new[] { typeof(Action<JSValueChecked>) });
+                nameof(JSReference.Run), new[] { typeof(Action<JSValue.Checked>) });
         //if (returnType == typeof(void))
         //{
         //    runDelegateType = typeof(Action<JSValue>);

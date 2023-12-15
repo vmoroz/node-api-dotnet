@@ -9,12 +9,12 @@ namespace Microsoft.JavaScript.NodeApi;
 public ref partial struct JSMap
 {
     public struct Enumerator :
-           IEnumerator<KeyValuePair<JSValueChecked, JSValueChecked>>,
+           IEnumerator<KeyValuePair<JSValue.Checked, JSValue.Checked>>,
            System.Collections.IEnumerator
     {
-        private readonly JSValueChecked _iterable;
-        private JSValueChecked _iterator;
-        private KeyValuePair<JSValueChecked, JSValueChecked>? _current;
+        private readonly JSValue.Checked _iterable;
+        private JSValue.Checked _iterator;
+        private KeyValuePair<JSValue.Checked, JSValue.Checked>? _current;
 
         internal Enumerator(JSValue iterable)
         {
@@ -35,13 +35,13 @@ public ref partial struct JSMap
             else
             {
                 JSArray currentEntry = (JSArray)nextResult["value"];
-                _current = new KeyValuePair<JSValueChecked, JSValueChecked>(
+                _current = new KeyValuePair<JSValue.Checked, JSValue.Checked>(
                     currentEntry[0], currentEntry[1]);
                 return true;
             }
         }
 
-        public readonly KeyValuePair<JSValueChecked, JSValueChecked> Current
+        public readonly KeyValuePair<JSValue.Checked, JSValue.Checked> Current
             => _current ?? throw new InvalidOperationException("Unexpected enumerator state");
 
         readonly object? System.Collections.IEnumerator.Current => Current;

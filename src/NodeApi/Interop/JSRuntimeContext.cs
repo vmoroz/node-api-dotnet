@@ -199,7 +199,7 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS constructor.</returns>
     internal JSValue RegisterClass<T>(JSValue constructorFunction) where T : class
     {
-        JSValueChecked ctor = constructorFunction;
+        JSValue.Checked ctor = constructorFunction;
         _classMap.AddOrUpdate(
             typeof(T),
             (_) => new JSReference(ctor.Value, isWeak: false),
@@ -217,7 +217,7 @@ public sealed class JSRuntimeContext : IDisposable
     /// <returns>The JS object.</returns>
     internal JSValue RegisterStaticClass(string name, JSValue classObject)
     {
-        JSValueChecked cls = classObject;
+        JSValue.Checked cls = classObject;
         _staticClassMap.AddOrUpdate(
             name,
             (_) => new JSReference(cls.Value, isWeak: false),
@@ -294,7 +294,7 @@ public sealed class JSRuntimeContext : IDisposable
             return JSValue.Undefined;
         }
 
-        JSValueChecked? wrapper = null;
+        JSValue.Checked? wrapper = null;
         JSReference CreateWrapper(T obj)
         {
             if (obj is Stream stream)
@@ -496,7 +496,7 @@ public sealed class JSRuntimeContext : IDisposable
         object collection,
         JSCallbackFunc0 createWrapper)
     {
-        JSValueChecked? wrapper = null;
+        JSValue.Checked? wrapper = null;
 
         _objectMap.AddOrUpdate(
             collection,
@@ -531,7 +531,7 @@ public sealed class JSRuntimeContext : IDisposable
     /// <param name="constructorFunction">JS struct constructor function returned from
     /// <see cref="JSNativeApi.DefineClass"/></param>
     /// <returns>The JS constructor.</returns>
-    internal JSValue RegisterStruct<T>(JSValueChecked constructorFunction) where T : struct
+    internal JSValue RegisterStruct<T>(JSValue.Checked constructorFunction) where T : struct
     {
         _structMap.AddOrUpdate(
             typeof(T),

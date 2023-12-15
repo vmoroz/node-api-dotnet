@@ -13,7 +13,7 @@ public readonly ref struct JSFunction
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSFunction(JSValueChecked value) => new(value.Value);
+    public static explicit operator JSFunction(JSValue.Checked value) => new(value.Value);
     public static explicit operator JSFunction(JSValue value) => new(value);
     public static implicit operator JSValue(JSFunction function) => function._value;
 
@@ -300,7 +300,7 @@ public readonly ref struct JSFunction
     /// optionally the specified sequence of arguments preceding any provided when the
     /// new function is called.
     /// </summary>
-    public JSFunction Bind(JSValue thisArg, params JSValueChecked[] args)
+    public JSFunction Bind(JSValue thisArg, params JSValue.Checked[] args)
     {
         if (args.Length == 0)
         {
@@ -308,7 +308,7 @@ public readonly ref struct JSFunction
         }
         else
         {
-            JSValueChecked[] thisAndArgs = new JSValueChecked[1 + args.Length];
+            JSValue.Checked[] thisAndArgs = new JSValue.Checked[1 + args.Length];
             thisAndArgs[0] = thisArg;
             args.CopyTo(thisAndArgs, 1);
             return (JSFunction)_value.CallMethod("bind", thisAndArgs);
@@ -341,7 +341,7 @@ public readonly ref struct JSFunction
     public JSValue CallAsStatic(JSValue arg0, JSValue arg1, JSValue arg2)
         => _value.Call(thisArg: default, arg0, arg1, arg2);
 
-    public JSValue CallAsStatic(params JSValueChecked[] args) => _value.Call(thisArg: default, args);
+    public JSValue CallAsStatic(params JSValue.Checked[] args) => _value.Call(thisArg: default, args);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.

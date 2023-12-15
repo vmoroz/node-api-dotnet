@@ -158,7 +158,7 @@ public class JSEventEmitter : IDisposable
         }
     }
 
-    public void Emit(string eventName, params JSValueChecked[] args)
+    public void Emit(string eventName, params JSValue.Checked[] args)
     {
         switch (args.Length)
         {

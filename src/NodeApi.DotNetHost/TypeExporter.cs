@@ -144,7 +144,7 @@ internal class TypeExporter
         string defineMethodName = type.IsInterface ? "DefineInterface" :
             isStatic ? "DefineStaticClass" : type.IsValueType ? "DefineStruct" : "DefineClass";
         MethodInfo defineClassMethod = classBuilderType.GetInstanceMethod(defineMethodName);
-        JSValue classObject = (JSValue)(JSValueChecked)defineClassMethod.Invoke(
+        JSValue classObject = (JSValue)(JSValue.Checked)defineClassMethod.Invoke(
             classBuilder,
             defineClassMethod.GetParameters().Select((_) => (object?)null).ToArray())!;
 

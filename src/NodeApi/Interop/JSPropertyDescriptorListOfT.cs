@@ -83,8 +83,8 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// </summary>
     public TDerived AddProperty(
       string name,
-      Func<TObject, JSValueChecked>? getter,
-      Action<TObject, JSValueChecked>? setter,
+      Func<TObject, JSValue.Checked>? getter,
+      Action<TObject, JSValue.Checked>? setter,
       JSPropertyAttributes attributes = JSPropertyAttributes.DefaultProperty)
     {
         return AddProperty(

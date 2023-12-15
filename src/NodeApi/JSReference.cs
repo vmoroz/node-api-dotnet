@@ -135,7 +135,7 @@ public class JSReference : IDisposable
         return result;
     }
 
-    public JSValueChecked? GetValueChecked()
+    public JSValue.Checked? GetValueChecked()
     {
         JSValueScope.CurrentRuntime.GetReferenceValue(Env, _handle, out napi_value result)
             .ThrowIfFailed();
@@ -176,11 +176,11 @@ public class JSReference : IDisposable
     /// associated with the reference to switch to the JS thread (if necessary) while operating
     /// on the value.
     /// </summary>
-    public T Run<T>(Func<JSValueChecked, T> action)
+    public T Run<T>(Func<JSValue.Checked, T> action)
     {
         T GetValueAndRunAction()
         {
-            JSValueChecked value = GetValue();
+            JSValue.Checked value = GetValue();
             if (value.Value.IsUndefined())
             {
                 throw new NullReferenceException("The JS reference is null.");

@@ -65,7 +65,7 @@ public readonly struct JSCallbackOverload
     /// a list of <see cref="JSCallbackOverload" /> entries is also provided via the
     /// <see cref="JSPropertyDescriptor.Data" /> property.
     /// </remarks>
-    public static JSValueChecked ResolveAndInvoke(JSCallbackArgs args)
+    public static JSValue.Checked ResolveAndInvoke(JSCallbackArgs args)
     {
         if (args.Data is not IReadOnlyList<JSCallbackOverload> overloads ||
             overloads.Count == 0)

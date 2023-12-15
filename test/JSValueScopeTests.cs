@@ -282,7 +282,7 @@ public class JSValueScopeTests
         using JSValueScope rootScope = TestScope(JSValueScopeType.Root);
 
         JSValueScope handleScope;
-        JSValueChecked objectValue;
+        JSValue.Checked objectValue;
         using (handleScope = new(JSValueScopeType.Handle))
         {
             objectValue = JSValue.CreateObject();
@@ -300,8 +300,8 @@ public class JSValueScopeTests
     {
         using JSValueScope rootScope = TestScope(JSValueScopeType.Root);
 
-        JSValueChecked objectValue = JSValue.CreateObject();
-        JSValueChecked propertyKey;
+        JSValue.Checked objectValue = JSValue.CreateObject();
+        JSValue.Checked propertyKey;
 
         JSValueScope handleScope;
         using (handleScope = new(JSValueScopeType.Handle))
@@ -313,7 +313,7 @@ public class JSValueScopeTests
         // The property key scope was closed so it's not valid to use as a method argument.
         Assert.True(handleScope.IsDisposed);
         JSValueScopeClosedException ex = Assert.Throws<JSValueScopeClosedException>(
-            () => (JSValueChecked)objectValue.Value[propertyKey.Value]);
+            () => (JSValue.Checked)objectValue.Value[propertyKey.Value]);
         Assert.Equal(handleScope, ex.Scope);
 
         // The object value scope was not closed so it's still valid.
@@ -340,7 +340,7 @@ public class JSValueScopeTests
     public void AccessValueFromDifferentThread()
     {
         using JSValueScope rootScope = TestScope(JSValueScopeType.Root);
-        JSValueChecked objectValue = JSValue.CreateObject();
+        JSValue.Checked objectValue = JSValue.CreateObject();
 
         // Run in a new thread which will not have any current scope.
         Task.Run(() =>
@@ -357,7 +357,7 @@ public class JSValueScopeTests
     public void AccessValueFromDifferentRootScope()
     {
         using JSValueScope rootScope1 = TestScope(JSValueScopeType.Root);
-        JSValueChecked objectValue = JSValue.CreateObject();
+        JSValue.Checked objectValue = JSValue.CreateObject();
 
         // Run in a new thread and establish another root scope there.
         Task.Run(() =>

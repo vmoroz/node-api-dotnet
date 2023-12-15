@@ -131,8 +131,8 @@ public partial class NodeStream : Stream
         ThrowIfError();
 
         int count = buffer.Length;
-        JSValueChecked value = Value;
-        JSValueChecked result = value.Value.CallMethod("read", count);
+        JSValue.Checked value = Value;
+        JSValue.Checked result = value.Value.CallMethod("read", count);
         if (result.Value.IsNull())
         {
             if ((bool)value.Value.GetProperty("readableEnded"))
@@ -191,7 +191,7 @@ public partial class NodeStream : Stream
         int count,
         CancellationToken cancellation)
     {
-        JSValueChecked bytes = (JSValue)new JSUInt8Array(buffer.AsMemory(offset, count));
+        JSValue.Checked bytes = (JSValue)new JSUInt8Array(buffer.AsMemory(offset, count));
         bool drained = (bool)Value.CallMethod("write", bytes.Value);
 
         if (!drained)
@@ -213,7 +213,7 @@ public partial class NodeStream : Stream
         ReadOnlyMemory<byte> buffer,
         CancellationToken cancellation = default)
     {
-        JSValueChecked bytes = (JSValue)new JSUInt8Array(MemoryMarshal.AsMemory(buffer));
+        JSValue.Checked bytes = (JSValue)new JSUInt8Array(MemoryMarshal.AsMemory(buffer));
         bool drained = (bool)Value.CallMethod("write", bytes.Value);
 
         if (!drained)
@@ -254,7 +254,7 @@ public partial class NodeStream : Stream
     {
         if (disposing)
         {
-            JSValueChecked? value = _valueReference.GetValueChecked();
+            JSValue.Checked? value = _valueReference.GetValueChecked();
             value?.Value.CallMethod("destroy");
             _valueReference.Dispose();
         }

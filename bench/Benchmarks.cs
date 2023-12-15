@@ -51,17 +51,17 @@ public abstract class Benchmarks
         "libnode" + GetSharedLibraryExtension());
 
     private napi_env _env;
-    private JSValueChecked _jsFunction;
-    private JSValueChecked _jsFunctionWithArgs;
-    private JSValueChecked _jsFunctionWithCallback;
-    private JSValueChecked _jsInstance;
-    private JSValueChecked _dotnetFunction;
-    private JSValueChecked _dotnetFunctionWithArgs;
-    private JSValueChecked _dotnetClass;
-    private JSValueChecked _dotnetInstance;
-    private JSValueChecked _jsFunctionCreateInstance;
-    private JSValueChecked _jsFunctionCallMethod;
-    private JSValueChecked _jsFunctionCallMethodWithArgs;
+    private JSValue.Checked _jsFunction;
+    private JSValue.Checked _jsFunctionWithArgs;
+    private JSValue.Checked _jsFunctionWithCallback;
+    private JSValue.Checked _jsInstance;
+    private JSValue.Checked _dotnetFunction;
+    private JSValue.Checked _dotnetFunctionWithArgs;
+    private JSValue.Checked _dotnetClass;
+    private JSValue.Checked _dotnetInstance;
+    private JSValue.Checked _jsFunctionCreateInstance;
+    private JSValue.Checked _jsFunctionCallMethod;
+    private JSValue.Checked _jsFunctionCallMethodWithArgs;
     private JSReference _reference = null!;
 
     /// <summary>
@@ -121,8 +121,8 @@ public abstract class Benchmarks
             nameof(DotnetClass), () => new DotnetClass());
         classBuilder.AddProperty(
             "property",
-            (DotnetClass x) => (JSValueChecked)(JSValue)x.Property,
-            (DotnetClass x, JSValueChecked value) => x.Property = (string)(JSValue)value);
+            (DotnetClass x) => (JSValue.Checked)(JSValue)x.Property,
+            (DotnetClass x, JSValue.Checked value) => x.Property = (string)(JSValue)value);
         classBuilder.AddMethod("method", (x) => (args) => DotnetClass.Method());
         _dotnetClass = classBuilder.DefineClass(JSValue.Undefined);
         _dotnetInstance = JSNativeApi.CallAsConstructor((JSValue)_dotnetClass);
@@ -216,9 +216,9 @@ public abstract class Benchmarks
     [MemoryDiagnoser(displayGenColumns: false)]
     public class Clr : Benchmarks
     {
-        private JSValueChecked _jsHost;
-        private JSValueChecked _jsFunctionCallMethodDynamic;
-        private JSValueChecked _jsFunctionCallMethodDynamicInterface;
+        private JSValue.Checked _jsHost;
+        private JSValue.Checked _jsFunctionCallMethodDynamic;
+        private JSValue.Checked _jsFunctionCallMethodDynamicInterface;
 
         [GlobalSetup]
         public new void Setup()

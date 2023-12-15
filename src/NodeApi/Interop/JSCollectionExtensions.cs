@@ -167,10 +167,10 @@ internal sealed class JSAsyncIterableEnumerator<T> : IAsyncEnumerator<T>
 
 internal sealed class JSIterableEnumerator<T> : IEnumerator<T>, System.Collections.IEnumerator
 {
-    private readonly JSValueChecked _iterable;
+    private readonly JSValue.Checked _iterable;
     private readonly JSValue.To<T> _fromJS;
-    private JSValueChecked _iterator;
-    private JSValueChecked? _current;
+    private JSValue.Checked _iterator;
+    private JSValue.Checked? _current;
 
     internal JSIterableEnumerator(JSValue iterable, JSValue.To<T> fromJS)
     {
@@ -196,7 +196,7 @@ internal sealed class JSIterableEnumerator<T> : IEnumerator<T>, System.Collectio
         }
     }
 
-    public T Current => _current is JSValueChecked value ? _fromJS(value.Value) :
+    public T Current => _current is JSValue.Checked value ? _fromJS(value.Value) :
         throw new InvalidOperationException("Invalid enumerator state");
 
     object? System.Collections.IEnumerator.Current => Current;
@@ -212,7 +212,7 @@ internal sealed class JSIterableEnumerator<T> : IEnumerator<T>, System.Collectio
     }
 }
 
-internal class JSAsyncIterableEnumerable<T> : IAsyncEnumerable<T>, IEquatable<JSValueChecked>
+internal class JSAsyncIterableEnumerable<T> : IAsyncEnumerable<T>, IEquatable<JSValue.Checked>
 {
     internal JSAsyncIterableEnumerable(JSValue iterable, JSValue.To<T> fromJS)
     {
@@ -224,7 +224,7 @@ internal class JSAsyncIterableEnumerable<T> : IAsyncEnumerable<T>, IEquatable<JS
 
     public JSValue Value => _iterableReference.GetValue();
 
-    bool IEquatable<JSValueChecked>.Equals(JSValueChecked other) => Value.Equals(other);
+    bool IEquatable<JSValue.Checked>.Equals(JSValue.Checked other) => Value.Equals(other);
 
     protected JSValue.To<T> FromJS { get; }
 
@@ -240,7 +240,7 @@ internal class JSAsyncIterableEnumerable<T> : IAsyncEnumerable<T>, IEquatable<JS
 #pragma warning restore IDE0060
 }
 
-internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSValueChecked>, IDisposable
+internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSValue.Checked>, IDisposable
 {
     internal JSIterableEnumerable(JSValue iterable, JSValue.To<T> fromJS)
     {
@@ -252,7 +252,7 @@ internal class JSIterableEnumerable<T> : IEnumerable<T>, IEquatable<JSValueCheck
 
     public JSValue Value => _iterableReference.GetValue();
 
-    bool IEquatable<JSValueChecked>.Equals(JSValueChecked other) => Value.Equals(other);
+    bool IEquatable<JSValue.Checked>.Equals(JSValue.Checked other) => Value.Equals(other);
 
     protected JSValue.To<T> FromJS { get; }
 
@@ -478,7 +478,7 @@ internal class JSSetSet<T> : JSSetCollection<T>, ISet<T>
 }
 
 internal class JSMapReadOnlyDictionary<TKey, TValue> :
-    IReadOnlyDictionary<TKey, TValue>, IEquatable<JSValueChecked>, IDisposable
+    IReadOnlyDictionary<TKey, TValue>, IEquatable<JSValue.Checked>, IDisposable
 {
     internal JSMapReadOnlyDictionary(
         JSValue map,
@@ -496,7 +496,7 @@ internal class JSMapReadOnlyDictionary<TKey, TValue> :
 
     public JSValue Value => _mapReference.GetValue();
 
-    bool IEquatable<JSValueChecked>.Equals(JSValueChecked other) => Value.Equals(other);
+    bool IEquatable<JSValue.Checked>.Equals(JSValue.Checked other) => Value.Equals(other);
 
     protected JSValue.To<TKey> KeyFromJS { get; }
     protected JSValue.To<TValue> ValueFromJS { get; }
@@ -543,7 +543,7 @@ internal class JSMapReadOnlyDictionary<TKey, TValue> :
 
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
     {
-        foreach (KeyValuePair<JSValueChecked, JSValueChecked> pair in (JSMap)Value)
+        foreach (KeyValuePair<JSValue.Checked, JSValue.Checked> pair in (JSMap)Value)
         {
             yield return new KeyValuePair<TKey, TValue>(
                 KeyFromJS(pair.Key.Value), ValueFromJS(pair.Value.Value));

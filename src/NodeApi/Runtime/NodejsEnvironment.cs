@@ -148,7 +148,7 @@ public sealed class NodejsEnvironment : IDisposable
     /// <seealso cref="UnhandledPromiseRejection" />
     public class UnhandledPromiseRejectionEventArgs : EventArgs
     {
-        public JSValueChecked Error { get; set; }
+        public JSValue.Checked Error { get; set; }
     }
 
     private EventHandler<UnhandledPromiseRejectionEventArgs>? _unhandledPromiseRejection;

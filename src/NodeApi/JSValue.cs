@@ -12,7 +12,7 @@ using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly ref struct JSValue
+public readonly ref partial struct JSValue
 {
     private readonly napi_value _handle = default;
     private readonly JSValueScope? _scope = null;
@@ -223,7 +223,7 @@ public readonly ref struct JSValue
         return func;
     }
 
-    public static JSValue CreateError(JSValueChecked? code, JSValue message)
+    public static JSValue CreateError(Checked? code, JSValue message)
         => CurrentRuntime.CreateError(CurrentEnvironmentHandle, (napi_value)code, (napi_value)message,
             out napi_value result).ThrowIfFailed(result);
 
@@ -422,153 +422,4 @@ public readonly ref struct JSValue
         throw new NotSupportedException(
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
     }
-}
-
-public readonly struct JSValueChecked
-{
-    private readonly napi_value _handle = default;
-    private readonly JSValueScope? _scope = null;
-
-    public readonly JSValueScope Scope => _scope ?? JSValueScope.Current;
-
-    public JSValue Value => new(_handle, _scope);
-
-    internal JSRuntime Runtime => Scope.Runtime;
-
-    /// <summary>
-    /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
-    /// <see cref="JSValue.Undefined" /> when used in any scope.
-    /// </summary>
-    public JSValueChecked() : this(default, null) { }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="JSValue" /> from a handle in the current scope.
-    /// </summary>
-    /// <exception cref="ArgumentNullException">Thrown when the handle is null.</exception>
-    /// <remarks>
-    /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
-    /// may cause an attempt to access an invalid memory location.
-    /// </remarks>
-    public JSValueChecked(napi_value handle) : this(handle, JSValueScope.Current) { }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
-    /// </summary>
-    /// <exception cref="ArgumentNullException">Thrown when either the handle or scope is null
-    /// (unless they are both null then this becomes an empty value that implicitly converts
-    /// to <see cref="JSValue.Undefined"/>).</exception>
-    /// <remarks>
-    /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
-    /// may cause an attempt to access an invalid memory location.
-    /// </remarks>
-    public JSValueChecked(napi_value handle, JSValueScope? scope)
-    {
-        if (scope is null)
-        {
-            if (!handle.IsNull) throw new ArgumentNullException(nameof(scope));
-        }
-        else
-        {
-            if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
-        }
-
-        _handle = handle;
-        _scope = scope;
-    }
-
-    /// <summary>
-    /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
-    /// <see cref="JSValue.Undefined" /> when used in any scope.
-    /// </summary>
-    public JSValueChecked(JSValue value) : this(value.Handle, value.Scope) { }
-
-    public static implicit operator JSValueChecked(JSValue value) => new(value.Handle);
-
-    public static implicit operator JSValueChecked?(napi_value handle) => handle.IsNull ? null : new(handle);
-
-    public static explicit operator JSValue(JSValueChecked value)
-        => new JSValue(value._handle, value.Scope);
-
-    public static explicit operator JSValue(JSValueChecked? value)
-        => value is JSValueChecked nonNullValue
-           ? new JSValue(nonNullValue._handle, nonNullValue.Scope)
-           : JSValue.Undefined;
-
-    public static explicit operator napi_value(JSValueChecked? value)
-        => value.HasValue ? value.Value.Handle : napi_value.Null;
-
-    internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
-
-    /// <summary>
-    /// Gets the value handle, or throws an exception if the value scope is disposed or
-    /// access from the current thread is invalid.
-    /// </summary>
-    /// <exception cref="JSValueScopeClosedException">The scope has been closed.</exception>
-    /// <exception cref="JSInvalidThreadAccessException">The scope is not valid on the current
-    /// thread.</exception>
-    public napi_value Handle
-    {
-        get
-        {
-            if (_scope == null)
-            {
-                // If the scope is null, this is an empty (uninitialized) instance.
-                // Implicitly convert to the JS `undefined` value.
-                return JSValue.Undefined.Handle;
-            }
-
-            // Ensure the scope is valid and on the current thread (environment).
-            _scope.ThrowIfDisposed();
-            _scope.ThrowIfInvalidThreadAccess();
-
-            // The handle must be non-null when the scope is non-null.
-            return _handle;
-        }
-    }
-
-    public JSFunction AsFunction() => new(new JSValue(Handle, Scope));
-
-    public JSObject AsObject() => new(new JSValue(Handle, Scope));
-
-    public override bool Equals([NotNullWhen(true)] object? obj)
-    {
-        // JSValue cannot be boxed.
-        return false;
-    }
-
-    public override int GetHashCode()
-    {
-        throw new NotSupportedException(
-            "Hashing JS values is not supported. Use JSSet or JSMap instead.");
-    }
-
-    public static implicit operator JSValueChecked(bool value) => JSValue.GetBoolean(value);
-    public static implicit operator JSValueChecked(sbyte value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(byte value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(short value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(ushort value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(int value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(uint value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(long value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(ulong value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(float value) => JSValue.CreateNumber(value);
-    public static implicit operator JSValueChecked(double value) => JSValue.CreateNumber(value);
-    //public static implicit operator JSValueChecked(bool? value) => JSValue.ValueOrDefault(value, value => GetBoolean(value));
-    //public static implicit operator JSValueChecked(sbyte? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(byte? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(short? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(ushort? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(int? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(uint? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(long? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(ulong? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(float? value) => ValueOrDefault(value, value => CreateNumber(value));
-    //public static implicit operator JSValueChecked(double? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValueChecked(string value) => value == null ? default : JSValue.CreateStringUtf16(value);
-    public static implicit operator JSValueChecked(char[] value) => value == null ? default : JSValue.CreateStringUtf16(value);
-    public static implicit operator JSValueChecked(Span<char> value) => JSValue.CreateStringUtf16(value);
-    public static implicit operator JSValueChecked(ReadOnlySpan<char> value) => JSValue.CreateStringUtf16(value);
-    public static implicit operator JSValueChecked(byte[] value) => value == null ? default : JSValue.CreateStringUtf8(value);
-    public static implicit operator JSValueChecked(Span<byte> value) => JSValue.CreateStringUtf8(value);
-    public static implicit operator JSValueChecked(ReadOnlySpan<byte> value) => JSValue.CreateStringUtf8(value);
 }

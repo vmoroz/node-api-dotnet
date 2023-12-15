@@ -17,12 +17,12 @@ public readonly struct JSPropertyDescriptor
     // Either Name or NameValue should be non-null.
     // NameValue supports non-string property names like symbols.
     public string? Name { get; }
-    public JSValueChecked? NameValue { get; }
+    public JSValue.Checked? NameValue { get; }
 
     public JSCallbackFunc? Method { get; }
     public JSCallbackFunc? Getter { get; }
     public JSCallbackFunc? Setter { get; }
-    public JSValueChecked? Value { get; }
+    public JSValue.Checked? Value { get; }
     public JSPropertyAttributes Attributes { get; }
     public object? Data { get; }
 
@@ -31,7 +31,7 @@ public readonly struct JSPropertyDescriptor
         JSCallbackFunc? method = null,
         JSCallbackFunc? getter = null,
         JSCallbackFunc? setter = null,
-        JSValueChecked? value = null,
+        JSValue.Checked? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {
@@ -51,7 +51,7 @@ public readonly struct JSPropertyDescriptor
         JSCallbackFunc? method = null,
         JSCallbackFunc? getter = null,
         JSCallbackFunc? setter = null,
-        JSValueChecked? value = null,
+        JSValue.Checked? value = null,
         JSPropertyAttributes attributes = JSPropertyAttributes.Default,
         object? data = null)
     {

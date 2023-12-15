@@ -19,7 +19,7 @@ public ref partial struct JSObject
         public IEnumerator<Builder> GetEnumerator() => throw new NotImplementedException();
         IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
 
-        public void Add(KeyValuePair<JSValueChecked, JSValueChecked> item) => throw new NotImplementedException();
+        public void Add(KeyValuePair<JSValue.Checked, JSValue.Checked> item) => throw new NotImplementedException();
 
         public JSObject AsObject() => throw new NotImplementedException();
     }

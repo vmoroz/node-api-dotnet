@@ -176,8 +176,8 @@ public struct JSError
     {
         get
         {
-            JSValueChecked? error = _errorRef?.GetValueChecked();
-            if (error is JSValueChecked jsErrorChecked)
+            JSValue.Checked? error = _errorRef?.GetValueChecked();
+            if (error is JSValue.Checked jsErrorChecked)
             {
                 JSValue jsError = jsErrorChecked.Value;
                 if (!jsError.IsObject())
@@ -198,7 +198,7 @@ public struct JSError
         }
     }
 
-    public readonly JSValueChecked ValueChecked => Value;
+    public readonly JSValue.Checked ValueChecked => Value;
 
     public readonly void ThrowError()
     {
@@ -244,7 +244,7 @@ public struct JSError
 
         // If the exception is a JSException for an error value, throw that error value;
         // otherwise construct a new error value from the exception message.
-        JSValueChecked error = (exception as JSException)?.Error?.ValueChecked ??
+        JSValue.Checked error = (exception as JSException)?.Error?.ValueChecked ??
             JSValue.CreateError(code: null, (JSValue)message);
 
         // When running on V8, the `Error.captureStackTrace()` function and `Error.stack` property
