@@ -132,10 +132,10 @@ public partial class NodeStream : Stream
 
         int count = buffer.Length;
         JSValue.Checked value = Value;
-        JSValue.Checked result = value.Value.CallMethod("read", count);
-        if (result.Value.IsNull())
+        JSValue.Checked result = value.ToValue().CallMethod("read", count);
+        if (result.ToValue().IsNull())
         {
-            if ((bool)value.Value.GetProperty("readableEnded"))
+            if ((bool)value.ToValue().GetProperty("readableEnded"))
             {
                 return 0;
             }
@@ -147,23 +147,23 @@ public partial class NodeStream : Stream
                 ThrowIfError();
 
                 value = Value;
-                result = value.Value.CallMethod("read", count);
+                result = value.ToValue().CallMethod("read", count);
             }
         }
 
-        if (!result.Value.IsTypedArray())
+        if (!result.ToValue().IsTypedArray())
         {
-            if (result.Value.IsNull())
+            if (result.ToValue().IsNull())
             {
                 return 0;
             }
 
             // The readable stream may be in "object mode", which isn't supported.
             throw new NotSupportedException(
-                "Unsupported stream read result type: " + result.Value.TypeOf());
+                "Unsupported stream read result type: " + result.ToValue().TypeOf());
         }
 
-        Memory<byte> bytes = ((JSUInt8Array)result.Value).Memory;
+        Memory<byte> bytes = ((JSUInt8Array)result.ToValue()).Memory;
         bytes.CopyTo(buffer);
         return bytes.Length;
     }
@@ -192,7 +192,7 @@ public partial class NodeStream : Stream
         CancellationToken cancellation)
     {
         JSValue.Checked bytes = (JSValue)new JSUInt8Array(buffer.AsMemory(offset, count));
-        bool drained = (bool)Value.CallMethod("write", bytes.Value);
+        bool drained = (bool)Value.CallMethod("write", bytes.ToValue());
 
         if (!drained)
         {
@@ -214,7 +214,7 @@ public partial class NodeStream : Stream
         CancellationToken cancellation = default)
     {
         JSValue.Checked bytes = (JSValue)new JSUInt8Array(MemoryMarshal.AsMemory(buffer));
-        bool drained = (bool)Value.CallMethod("write", bytes.Value);
+        bool drained = (bool)Value.CallMethod("write", bytes.ToValue());
 
         if (!drained)
         {
@@ -255,7 +255,7 @@ public partial class NodeStream : Stream
         if (disposing)
         {
             JSValue.Checked? value = _valueReference.GetValueChecked();
-            value?.Value.CallMethod("destroy");
+            value?.ToValue().CallMethod("destroy");
             _valueReference.Dispose();
         }
     }

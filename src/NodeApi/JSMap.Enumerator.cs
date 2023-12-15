@@ -25,7 +25,7 @@ public ref partial struct JSMap
 
         public bool MoveNext()
         {
-            JSValue nextResult = _iterator.Value.CallMethod("next");
+            JSValue nextResult = _iterator.ToValue().CallMethod("next");
             JSValue done = nextResult["done"];
             if (done.IsBoolean() && (bool)done)
             {
@@ -48,7 +48,7 @@ public ref partial struct JSMap
 
         void System.Collections.IEnumerator.Reset()
         {
-            _iterator = _iterable.Value.CallMethod(JSSymbol.Iterator);
+            _iterator = _iterable.ToValue().CallMethod(JSSymbol.Iterator);
             _current = default;
         }
 

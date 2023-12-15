@@ -182,7 +182,7 @@ internal sealed class JSIterableEnumerator<T> : IEnumerator<T>, System.Collectio
 
     public bool MoveNext()
     {
-        JSValue nextResult = _iterator.Value.CallMethod("next");
+        JSValue nextResult = _iterator.ToValue().CallMethod("next");
         JSValue done = nextResult["done"];
         if (done.IsBoolean() && (bool)done)
         {
@@ -196,14 +196,14 @@ internal sealed class JSIterableEnumerator<T> : IEnumerator<T>, System.Collectio
         }
     }
 
-    public T Current => _current is JSValue.Checked value ? _fromJS(value.Value) :
+    public T Current => _current is JSValue.Checked value ? _fromJS(value.ToValue()) :
         throw new InvalidOperationException("Invalid enumerator state");
 
     object? System.Collections.IEnumerator.Current => Current;
 
     void System.Collections.IEnumerator.Reset()
     {
-        _iterator = _iterable.Value.CallMethod(JSSymbol.Iterator);
+        _iterator = _iterable.ToValue().CallMethod(JSSymbol.Iterator);
         _current = default;
     }
 
@@ -546,7 +546,7 @@ internal class JSMapReadOnlyDictionary<TKey, TValue> :
         foreach (KeyValuePair<JSValue.Checked, JSValue.Checked> pair in (JSMap)Value)
         {
             yield return new KeyValuePair<TKey, TValue>(
-                KeyFromJS(pair.Key.Value), ValueFromJS(pair.Value.Value));
+                KeyFromJS(pair.Key.ToValue()), ValueFromJS(pair.Value.ToValue()));
         }
     }
 

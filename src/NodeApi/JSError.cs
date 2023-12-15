@@ -179,7 +179,7 @@ public struct JSError
             JSValue.Checked? error = _errorRef?.GetValueChecked();
             if (error is JSValue.Checked jsErrorChecked)
             {
-                JSValue jsError = jsErrorChecked.Value;
+                JSValue jsError = jsErrorChecked.ToValue();
                 if (!jsError.IsObject())
                 {
                     return jsError;
@@ -263,7 +263,7 @@ public struct JSError
 
             // Override the `stack` property of the JS Error object, and add private
             // properties that the overridden property getter uses to construct the stack.
-            error.Value.DefineProperties(
+            error.ToValue().DefineProperties(
                 JSPropertyDescriptor.Accessor(
                     "stack", GetErrorStack, setter: null, JSPropertyAttributes.DefaultProperty),
                 JSPropertyDescriptor.ForValue("__dotnetStack", dotnetStack),

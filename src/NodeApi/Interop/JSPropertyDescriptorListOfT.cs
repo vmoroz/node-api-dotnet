@@ -91,7 +91,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
           name,
           getter == null ? null : args =>
           {
-              return (_unwrap(args) is TObject obj) ? getter(obj).Value : JSValue.Undefined;
+              return (_unwrap(args) is TObject obj) ? getter(obj).ToValue() : JSValue.Undefined;
           },
           setter == null ? null : args =>
           {

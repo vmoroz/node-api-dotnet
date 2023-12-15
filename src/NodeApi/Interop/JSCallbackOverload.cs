@@ -49,7 +49,7 @@ public readonly struct JSCallbackOverload
 
     public static JSCallbackDescriptor CreateDescriptor(JSCallbackOverload[] overloads)
     {
-        return new JSCallbackDescriptor(args => ResolveAndInvoke(args).Value, overloads);
+        return new JSCallbackDescriptor(args => ResolveAndInvoke(args).ToValue(), overloads);
     }
 
     /// <summary>

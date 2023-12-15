@@ -286,12 +286,12 @@ public class JSValueScopeTests
         using (handleScope = new(JSValueScopeType.Handle))
         {
             objectValue = JSValue.CreateObject();
-            Assert.True(objectValue.Value.IsObject());
+            Assert.True(objectValue.ToValue().IsObject());
         }
 
         Assert.True(handleScope.IsDisposed);
         JSValueScopeClosedException ex = Assert.Throws<JSValueScopeClosedException>(
-            () => objectValue.Value.IsObject());
+            () => objectValue.ToValue().IsObject());
         Assert.Equal(handleScope, ex.Scope);
     }
 
@@ -307,17 +307,17 @@ public class JSValueScopeTests
         using (handleScope = new(JSValueScopeType.Handle))
         {
             propertyKey = "test";
-            Assert.True(propertyKey.Value.IsString());
+            Assert.True(propertyKey.ToValue().IsString());
         }
 
         // The property key scope was closed so it's not valid to use as a method argument.
         Assert.True(handleScope.IsDisposed);
         JSValueScopeClosedException ex = Assert.Throws<JSValueScopeClosedException>(
-            () => (JSValue.Checked)objectValue.Value[propertyKey.Value]);
+            () => (JSValue.Checked)objectValue.ToValue()[propertyKey.ToValue()]);
         Assert.Equal(handleScope, ex.Scope);
 
         // The object value scope was not closed so it's still valid.
-        Assert.True(objectValue.Value.IsObject());
+        Assert.True(objectValue.ToValue().IsObject());
     }
 
     [Fact]
@@ -347,7 +347,7 @@ public class JSValueScopeTests
         {
             Assert.Throws<JSInvalidThreadAccessException>(() => JSValueScope.Current);
             JSInvalidThreadAccessException ex = Assert.Throws<JSInvalidThreadAccessException>(
-                () => objectValue.Value.IsObject());
+                () => objectValue.ToValue().IsObject());
             Assert.Null(ex.CurrentScope);
             Assert.Equal(rootScope, ex.TargetScope);
         }).Wait();
@@ -365,7 +365,7 @@ public class JSValueScopeTests
             using JSValueScope rootScope2 = TestScope(JSValueScopeType.Root);
             Assert.Equal(JSValueScopeType.Root, JSValueScope.Current.ScopeType);
             JSInvalidThreadAccessException ex = Assert.Throws<JSInvalidThreadAccessException>(
-                () => objectValue.Value.IsObject());
+                () => objectValue.ToValue().IsObject());
             Assert.Equal(rootScope2, ex.CurrentScope);
             Assert.Equal(rootScope1, ex.TargetScope);
         }).Wait();

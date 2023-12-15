@@ -181,12 +181,12 @@ public class JSReference : IDisposable
         T GetValueAndRunAction()
         {
             JSValue.Checked value = GetValue();
-            if (value.Value.IsUndefined())
+            if (value.ToValue().IsUndefined())
             {
                 throw new NullReferenceException("The JS reference is null.");
             }
 
-            return action(value.Value);
+            return action(value.ToValue());
         }
 
         JSSynchronizationContext? synchronizationContext = SynchronizationContext;

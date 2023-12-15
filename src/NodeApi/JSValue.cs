@@ -25,7 +25,11 @@ public readonly ref partial struct JSValue
     /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
     /// <see cref="JSValue.Undefined" /> when used in any scope.
     /// </summary>
-    public JSValue() : this(default, null) { }
+    public JSValue()
+    {
+        _handle = default;
+        _scope = null;
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the current scope.
@@ -47,17 +51,9 @@ public readonly ref partial struct JSValue
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
     /// </remarks>
-    public JSValue(napi_value handle, JSValueScope? scope)
+    public JSValue(napi_value handle, JSValueScope scope)
     {
-        if (scope is null)
-        {
-            if (!handle.IsNull) throw new ArgumentNullException(nameof(scope));
-        }
-        else
-        {
-            if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
-        }
-
+        if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
         _handle = handle;
         _scope = scope;
     }
@@ -77,7 +73,7 @@ public readonly ref partial struct JSValue
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return Undefined._handle;
+                return CurrentRuntime.GetUndefined(CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
             }
 
             // Ensure the scope is valid and on the current thread (environment).
@@ -100,8 +96,7 @@ public readonly ref partial struct JSValue
     /// </summary>
     internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
 
-    public static JSValue Undefined
-        => CurrentRuntime.GetUndefined(CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
+    public static JSValue Undefined => default;
     public static JSValue Null
         => CurrentRuntime.GetNull(CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
     public static JSValue Global

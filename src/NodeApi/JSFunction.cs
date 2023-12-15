@@ -13,7 +13,7 @@ public readonly ref struct JSFunction
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSFunction(JSValue.Checked value) => new(value.Value);
+    public static explicit operator JSFunction(JSValue.Checked value) => new(value.ToValue());
     public static explicit operator JSFunction(JSValue value) => new(value);
     public static implicit operator JSValue(JSFunction function) => function._value;
 

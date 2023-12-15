@@ -17,15 +17,17 @@ public readonly ref partial struct JSValue
 
         public readonly JSValueScope Scope => _scope ?? JSValueScope.Current;
 
-        public JSValue Value => new(_handle, _scope);
-
         internal JSRuntime Runtime => Scope.Runtime;
 
         /// <summary>
         /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
         /// <see cref="JSValue.Undefined" /> when used in any scope.
         /// </summary>
-        public Checked() : this(default, null) { }
+        public Checked()
+        {
+            _handle = default;
+            _scope = null;
+        }
 
         /// <summary>
         /// Creates a new instance of <see cref="JSValue" /> from a handle in the current scope.
@@ -47,17 +49,9 @@ public readonly ref partial struct JSValue
         /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
         /// may cause an attempt to access an invalid memory location.
         /// </remarks>
-        public Checked(napi_value handle, JSValueScope? scope)
+        public Checked(napi_value handle, JSValueScope scope)
         {
-            if (scope is null)
-            {
-                if (!handle.IsNull) throw new ArgumentNullException(nameof(scope));
-            }
-            else
-            {
-                if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
-            }
-
+            if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
             _handle = handle;
             _scope = scope;
         }
@@ -66,24 +60,11 @@ public readonly ref partial struct JSValue
         /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
         /// <see cref="JSValue.Undefined" /> when used in any scope.
         /// </summary>
-        public Checked(JSValue value) : this(value.Handle, value.Scope) { }
-
-        public static implicit operator Checked(JSValue value) => new(value.Handle);
-
-        public static implicit operator Checked?(napi_value handle) => handle.IsNull ? null : new(handle);
-
-        public static explicit operator JSValue(Checked value)
-            => new JSValue(value._handle, value.Scope);
-
-        public static explicit operator JSValue(Checked? value)
-            => value is Checked nonNullValue
-               ? new JSValue(nonNullValue._handle, nonNullValue.Scope)
-               : JSValue.Undefined;
-
-        public static explicit operator napi_value(Checked? value)
-            => value.HasValue ? value.Value.Handle : napi_value.Null;
-
-        internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
+        public Checked(JSValue value)
+        {
+            _handle = value.Handle;
+            _scope = value.Scope;
+        }
 
         /// <summary>
         /// Gets the value handle, or throws an exception if the value scope is disposed or
@@ -100,7 +81,10 @@ public readonly ref partial struct JSValue
                 {
                     // If the scope is null, this is an empty (uninitialized) instance.
                     // Implicitly convert to the JS `undefined` value.
-                    return JSValue.Undefined.Handle;
+                    JSValueScope scope = JSValueScope.Current;
+                    return scope.Runtime.GetUndefined(
+                        scope.UncheckedEnvironmentHandle, out napi_value result)
+                        .ThrowIfFailed(result);
                 }
 
                 // Ensure the scope is valid and on the current thread (environment).
@@ -112,9 +96,41 @@ public readonly ref partial struct JSValue
             }
         }
 
-        public JSFunction AsFunction() => new(new JSValue(Handle, Scope));
+        public static implicit operator Checked(JSValue value) => new(value);
+        public static implicit operator Checked?(napi_value handle)
+            => handle.IsNull ? null : new(handle);
 
-        public JSObject AsObject() => new(new JSValue(Handle, Scope));
+        public static explicit operator JSValue(Checked value)
+            => new JSValue(value.Handle, value.Scope);
+
+        public static explicit operator JSValue(Checked? value)
+            => value is Checked nonNullValue
+               ? new JSValue(nonNullValue.Handle, nonNullValue.Scope)
+               : JSValue.Undefined;
+
+        public static explicit operator napi_value(Checked? value)
+            => value.HasValue ? value.Value.Handle : napi_value.Null;
+
+        internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
+
+        public JSValue ToValue()
+        {
+            if (_scope == null)
+            {
+                return default;
+            }
+
+            // Ensure the scope is valid and on the current thread (environment).
+            _scope.ThrowIfDisposed();
+            _scope.ThrowIfInvalidThreadAccess();
+
+            // The handle must be non-null when the scope is non-null.
+            return new JSValue(_handle, _scope);
+        }
+
+        public JSFunction AsFunction() => new(ToValue());
+
+        public JSObject AsObject() => new(ToValue());
 
         public override bool Equals([NotNullWhen(true)] object? obj)
         {

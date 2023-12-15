@@ -228,7 +228,7 @@ public static partial class JSNativeApi
             self.Runtime.DefineProperties(
                 self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
                 .ThrowIfFailed());
-        Array.ForEach(handles, handle => self.Value.AddGCHandleFinalizer(handle));
+        Array.ForEach(handles, handle => self.ToValue().AddGCHandleFinalizer(handle));
     }
 
     public static unsafe void DefineProperties(this JSValue thisValue, params JSPropertyDescriptor[] descriptors)
@@ -238,7 +238,7 @@ public static partial class JSNativeApi
             self.Runtime.DefineProperties(
                 self.UncheckedEnvironmentHandle, self.Handle, descriptorsPtr)
                 .ThrowIfFailed());
-        Array.ForEach(handles, handle => self.Value.AddGCHandleFinalizer(handle));
+        Array.ForEach(handles, handle => self.ToValue().AddGCHandleFinalizer(handle));
     }
 
     public static bool IsArray(this JSValue thisValue)
@@ -382,7 +382,7 @@ public static partial class JSNativeApi
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
         {
-            argv[i] = args[i].Value.Handle;
+            argv[i] = args[i].ToValue().Handle;
         }
 
         return thisValue.Runtime.NewInstance(
@@ -461,9 +461,9 @@ public static partial class JSNativeApi
         {
             func = DefineClass(name, callback, (nint)descriptorHandle, descriptorsPtr);
         });
-        func!.Value.Value.AddGCHandleFinalizer((nint)descriptorHandle);
-        Array.ForEach(handles, handle => func!.Value.Value.AddGCHandleFinalizer(handle));
-        return func!.Value.Value;
+        func!.Value.ToValue().AddGCHandleFinalizer((nint)descriptorHandle);
+        Array.ForEach(handles, handle => func!.Value.ToValue().AddGCHandleFinalizer(handle));
+        return func!.Value.ToValue();
     }
 
     /// <summary>

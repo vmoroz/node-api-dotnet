@@ -138,7 +138,7 @@ public abstract class Benchmarks
             "{ instance.method(...args); }; " +
             "jsFunctionCallMethodWithArgs");
 
-        _reference = new JSReference(_jsFunction.Value);
+        _reference = new JSReference(_jsFunction.ToValue());
     }
 
     private static JSValueScope NewJSScope() => new(JSValueScopeType.Callback);
@@ -197,7 +197,7 @@ public abstract class Benchmarks
     public void CallDotnetMethodWithArgs()
     {
         _jsFunctionCallMethodWithArgs.AsFunction().CallAsStatic(
-            _dotnetInstance.Value, "1", "2", "3");
+            _dotnetInstance.ToValue(), "1", "2", "3");
     }
 
     [Benchmark]
@@ -209,7 +209,7 @@ public abstract class Benchmarks
     [Benchmark]
     public void ReferenceCreateAndDispose()
     {
-        using JSReference reference = new(_jsFunction.Value);
+        using JSReference reference = new(_jsFunction.ToValue());
     }
 
     [ShortRunJob]

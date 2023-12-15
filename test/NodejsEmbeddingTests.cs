@@ -69,7 +69,7 @@ public class NodejsEmbeddingTests
         string? errorMessage = null;
         nodejs.UnhandledPromiseRejection += (_, e) =>
         {
-            errorMessage = (string)e.Error.Value.GetProperty("message");
+            errorMessage = (string)e.Error.ToValue().GetProperty("message");
         };
 
         nodejs.SynchronizationContext.Run(() =>

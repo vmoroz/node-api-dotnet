@@ -202,7 +202,7 @@ public sealed class JSRuntimeContext : IDisposable
         JSValue.Checked ctor = constructorFunction;
         _classMap.AddOrUpdate(
             typeof(T),
-            (_) => new JSReference(ctor.Value, isWeak: false),
+            (_) => new JSReference(ctor.ToValue(), isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Class already registered for JS export: " + typeof(T)));
         return constructorFunction;
@@ -220,7 +220,7 @@ public sealed class JSRuntimeContext : IDisposable
         JSValue.Checked cls = classObject;
         _staticClassMap.AddOrUpdate(
             name,
-            (_) => new JSReference(cls.Value, isWeak: false),
+            (_) => new JSReference(cls.ToValue(), isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Class already registered for JS export: " + name));
         return classObject;
@@ -535,10 +535,10 @@ public sealed class JSRuntimeContext : IDisposable
     {
         _structMap.AddOrUpdate(
             typeof(T),
-            (_) => new JSReference(constructorFunction.Value, isWeak: false),
+            (_) => new JSReference(constructorFunction.ToValue(), isWeak: false),
             (_, _) => throw new InvalidOperationException(
                 "Struct already registered for JS export: " + typeof(T)));
-        return constructorFunction.Value;
+        return constructorFunction.ToValue();
     }
 
     /// <summary>

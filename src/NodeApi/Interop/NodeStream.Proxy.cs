@@ -170,7 +170,7 @@ public partial class NodeStream
         // https://nodejs.org/api/stream.html#readable_readsize
 
         using var asyncScope = new JSAsyncScope();
-        using JSReference nodeStreamReference = new(nodeStream.Value);
+        using JSReference nodeStreamReference = new(nodeStream.ToValue());
 
         byte[] buffer = ArrayPool<byte>.Shared.Rent(ReadChunkSize);
         try
@@ -182,7 +182,7 @@ public partial class NodeStream
 #endif
 
             nodeStream = nodeStreamReference.GetValue();
-            nodeStream.Value.CallMethod(
+            nodeStream.ToValue().CallMethod(
                 "push", count == 0 ? JSValue.Null : new JSUInt8Array(buffer, 0, count));
         }
         catch (Exception ex)
@@ -190,7 +190,7 @@ public partial class NodeStream
             try
             {
                 nodeStream = nodeStreamReference.GetValue();
-                nodeStream.Value.CallMethod("destroy", new JSError(ex).Value);
+                nodeStream.ToValue().CallMethod("destroy", new JSError(ex).Value);
             }
             catch (Exception)
             {
@@ -244,7 +244,7 @@ public partial class NodeStream
         // https://nodejs.org/api/stream.html#writable_writechunk-encoding-callback
 
         using var asyncScope = new JSAsyncScope();
-        using JSReference callbackReference = new(callback.Value);
+        using JSReference callbackReference = new(callback.ToValue());
         try
         {
 #if NETFRAMEWORK
@@ -254,7 +254,7 @@ public partial class NodeStream
 #endif
 
             callback = callbackReference.GetValue();
-            callback.Value.Call();
+            callback.ToValue().Call();
         }
         catch (Exception ex)
         {
@@ -262,7 +262,7 @@ public partial class NodeStream
             try
             {
                 callback = callbackReference.GetValue();
-                callback.Value.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
+                callback.ToValue().Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
             }
             catch (Exception)
             {
@@ -287,20 +287,20 @@ public partial class NodeStream
         JSValue.Checked callback)
     {
         using var asyncScope = new JSAsyncScope();
-        using JSReference callbackReference = new(callback.Value);
+        using JSReference callbackReference = new(callback.ToValue());
         try
         {
             await stream.FlushAsync();
 
             callback = callbackReference.GetValue();
-            callback.Value.Call();
+            callback.ToValue().Call();
         }
         catch (Exception ex)
         {
             try
             {
                 callback = callbackReference.GetValue();
-                callback.Value.Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
+                callback.ToValue().Call(thisArg: JSValue.Undefined, new JSError(ex).Value);
             }
             catch (Exception)
             {
