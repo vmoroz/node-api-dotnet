@@ -24,7 +24,7 @@ public class TestBasicTypesNumber : TestHelper, ITestObject
     private static JSValue OperatorFloat(JSCallbackArgs args) => (float)args[0] == (float)args[0].GetValueDouble();
     private static JSValue OperatorDouble(JSCallbackArgs args) => (double)args[0] == args[0].GetValueDouble();
 
-    public JSObject Init() => new()
+    public JSObject Init() => new JSObject.Builder()
     {
         Method(ToInt32),
         Method(ToUInt32),

@@ -25,7 +25,7 @@ public class JSReferenceTests
 
         JSValue value = JSValue.CreateObject();
         JSReference reference = new(value);
-        Assert.True(reference.GetValue()?.IsObject() ?? false);
+        Assert.True(reference.GetValue().IsObject());
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class JSReferenceTests
             reference = new JSReference(value);
         }
 
-        Assert.True(reference.GetValue()?.IsObject() ?? false);
+        Assert.True(reference.GetValue().IsObject());
     }
 
     [Fact]

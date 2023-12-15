@@ -424,42 +424,6 @@ public readonly ref struct JSValue
     }
 }
 
-public readonly ref struct JSValueOptional
-{
-    private readonly napi_value _handle;
-    private readonly JSValueScope? _scope;
-
-    public readonly bool HasValue => _scope != null;
-
-    public readonly JSValueScope Scope => _scope ?? throw new InvalidOperationException("No value");
-
-    public readonly JSValue Value => HasValue ? new JSValue(_handle, _scope)
-                                     : throw new InvalidOperationException("No value");
-
-    public readonly napi_value Handle => HasValue ? _handle : napi_value.Null;
-
-    public JSValueOptional() : this(default, null) { }
-
-    public JSValueOptional(JSValue value) : this(value.Handle, value.Scope) { }
-
-    private JSValueOptional(napi_value handle, JSValueScope? scope)
-    {
-        _handle = handle;
-        _scope = handle.IsNull ? null : scope;
-    }
-
-    public readonly JSValue GetValueOrDefault()
-        => HasValue ? new JSValue(_handle, _scope) : default;
-
-    public static implicit operator JSValueOptional(JSValue value) => new(value);
-
-    public static implicit operator JSValueOptional(napi_value handle) => new(handle);
-
-    public static explicit operator JSValue(JSValueOptional value) => value.Value;
-
-    public static explicit operator napi_value(JSValueOptional value) => value.Handle;
-}
-
 public readonly struct JSValueChecked
 {
     private readonly napi_value _handle = default;
@@ -531,7 +495,7 @@ public readonly struct JSValueChecked
            : JSValue.Undefined;
 
     public static explicit operator napi_value(JSValueChecked? value)
-    => value.HasValue ? value.Value.Handle : napi_value.Null;
+        => value.HasValue ? value.Value.Handle : napi_value.Null;
 
     internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
 
@@ -577,4 +541,34 @@ public readonly struct JSValueChecked
         throw new NotSupportedException(
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
     }
+
+    public static implicit operator JSValueChecked(bool value) => JSValue.GetBoolean(value);
+    public static implicit operator JSValueChecked(sbyte value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(byte value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(short value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(ushort value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(int value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(uint value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(long value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(ulong value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(float value) => JSValue.CreateNumber(value);
+    public static implicit operator JSValueChecked(double value) => JSValue.CreateNumber(value);
+    //public static implicit operator JSValueChecked(bool? value) => JSValue.ValueOrDefault(value, value => GetBoolean(value));
+    //public static implicit operator JSValueChecked(sbyte? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(byte? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(short? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(ushort? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(int? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(uint? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(long? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(ulong? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(float? value) => ValueOrDefault(value, value => CreateNumber(value));
+    //public static implicit operator JSValueChecked(double? value) => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValueChecked(string value) => value == null ? default : JSValue.CreateStringUtf16(value);
+    public static implicit operator JSValueChecked(char[] value) => value == null ? default : JSValue.CreateStringUtf16(value);
+    public static implicit operator JSValueChecked(Span<char> value) => JSValue.CreateStringUtf16(value);
+    public static implicit operator JSValueChecked(ReadOnlySpan<char> value) => JSValue.CreateStringUtf16(value);
+    public static implicit operator JSValueChecked(byte[] value) => value == null ? default : JSValue.CreateStringUtf8(value);
+    public static implicit operator JSValueChecked(Span<byte> value) => JSValue.CreateStringUtf8(value);
+    public static implicit operator JSValueChecked(ReadOnlySpan<byte> value) => JSValue.CreateStringUtf8(value);
 }

@@ -31,8 +31,8 @@ public class GCTests
                 new(nameof(DotnetClass), () => new DotnetClass());
             classBuilder.AddProperty(
                 "property",
-                (x) => x.Property,
-                (x, value) => x.Property = (string)value);
+                (DotnetClass x) => (JSValueChecked)x.Property,
+                (DotnetClass x, JSValueChecked value) => x.Property = (string)(JSValue)value);
             classBuilder.AddMethod("method", (x) => (args) => DotnetClass.Method());
             JSObject dotnetClass = (JSObject)classBuilder.DefineClass();
 

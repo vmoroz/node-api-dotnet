@@ -133,7 +133,7 @@ public partial class TestObject : TestHelper, ITestObject
         JSValue obj = args[0];
         long sum = 0;
 
-        foreach (KeyValuePair<JSValue, JSValue> pair in obj.Properties)
+        foreach (JSValueKeyValuePair pair in obj.Properties)
         {
             sum += (long)pair.Value;
         }
@@ -145,7 +145,7 @@ public partial class TestObject : TestHelper, ITestObject
     {
         JSValue obj = args[0];
 
-        foreach (KeyValuePair<JSValue, JSValue> pair in obj.Properties)
+        foreach (JSValueKeyValuePair pair in obj.Properties)
         {
             obj[pair.Key] = (long)pair.Value + 1;
         }
@@ -160,8 +160,8 @@ public partial class TestObject : TestHelper, ITestObject
         return obj.InstanceOf(constructor);
     }
 
-    public JSObject Init() =>
-    [
+    public JSObject Init() => new JSObject.Builder
+    {
         Method(GetPropertyNames),
         Method(DefineProperties),
         Method(DefineValueProperty),
@@ -209,5 +209,5 @@ public partial class TestObject : TestHelper, ITestObject
         Method(SubscriptSetWithUtf8StyleString),
         Method(SubscriptSetWithCSharpStyleString),
         Method(SubscriptSetAtIndex),
-    ];
+    };
 }

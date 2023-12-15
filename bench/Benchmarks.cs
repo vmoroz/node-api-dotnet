@@ -166,7 +166,7 @@ public abstract class Benchmarks
     [Benchmark]
     public void CallJSMethodWithArgs()
     {
-        _jsInstance.CallMethod("method", "1", "2", "3");
+        _jsInstance.AsObject().CallMethod("method", "1", "2", "3");
     }
 
     [Benchmark]

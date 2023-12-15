@@ -254,7 +254,7 @@ public partial class NodeStream : Stream
     {
         if (disposing)
         {
-            JSValueChecked? value = _valueReference.GetValueOptional();
+            JSValueChecked? value = _valueReference.GetValueChecked();
             value?.Value.CallMethod("destroy");
             _valueReference.Dispose();
         }

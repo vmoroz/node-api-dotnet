@@ -23,7 +23,7 @@ public class TestBasicTypesArray : TestHelper, ITestObject
         return JSValue.Undefined;
     }
 
-    public JSObject Init() => new()
+    public JSObject Init() => new JSObject.Builder()
     {
         Method(CreateArray),
         Method(GetLength),

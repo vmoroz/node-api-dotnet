@@ -25,7 +25,7 @@ public class Binding
     {
         if (_testObjects.TryGetValue(typeof(T), out JSReference? testRef))
         {
-            return testRef.GetValue() ?? JSValue.Undefined;
+            return testRef.GetValue();
         }
 
         JSValue obj = new T().Init();
@@ -41,13 +41,13 @@ public interface ITestObject
 
 public abstract class TestHelper
 {
-    public static KeyValuePair<JSValue, JSValue> Method(
+    public static KeyValuePair<JSValueChecked, JSValueChecked> Method(
         JSCallbackFunc callback,
         [CallerArgumentExpression(nameof(callback))] string callbackName = "")
     {
         string name = callbackName ?? string.Empty;
         name = name.Substring(name.IndexOf('.') + 1);
-        return new KeyValuePair<JSValue, JSValue>(
+        return new KeyValuePair<JSValueChecked, JSValueChecked>(
             ToCamelCase(name), JSValue.CreateFunction(name, callback));
     }
 

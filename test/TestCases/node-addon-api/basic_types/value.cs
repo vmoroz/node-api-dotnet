@@ -35,7 +35,7 @@ public class TestBasicTypesValue : TestHelper, ITestObject
     private static JSValue CreateExternal(JSCallbackArgs _) => JSValue.CreateExternal(1);
 
 
-    public JSObject Init() => new()
+    public JSObject Init() => new JSObject.Builder()
     {
         Method(IsUndefined),
         Method(IsNull),

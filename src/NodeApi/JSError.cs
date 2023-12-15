@@ -176,7 +176,7 @@ public struct JSError
     {
         get
         {
-            JSValueChecked? error = _errorRef?.GetValueOptional();
+            JSValueChecked? error = _errorRef?.GetValueChecked();
             if (error is JSValueChecked jsErrorChecked)
             {
                 JSValue jsError = jsErrorChecked.Value;

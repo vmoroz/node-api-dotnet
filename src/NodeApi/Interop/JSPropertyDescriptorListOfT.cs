@@ -47,7 +47,7 @@ public abstract class JSPropertyDescriptorList<TDerived, TObject>
     /// <summary>
     /// Adds a property with getter and/or setter callbacks.
     /// </summary>
-    public TDerived AddProperty(
+    private TDerived AddProperty(
       string name,
       JSCallbackFunc? getter,
       JSCallbackFunc? setter,

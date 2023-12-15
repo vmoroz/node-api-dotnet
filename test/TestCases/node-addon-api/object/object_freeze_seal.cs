@@ -21,7 +21,7 @@ public partial class TestObjectFreezeSeal : TestHelper, ITestObject
         return true;
     }
 
-    public JSObject Init() => new()
+    public JSObject Init() => new JSObject.Builder()
     {
         Method(Freeze),
         Method(Seal),

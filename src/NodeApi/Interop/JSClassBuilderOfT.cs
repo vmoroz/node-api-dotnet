@@ -57,7 +57,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
     /// specified, the constructor callback must also invoke the base class constructor.</param>
     /// <returns>The class object (constructor).</returns>
     /// <exception cref="InvalidOperationException">A constructor was not provided.</exception>
-    public JSValue DefineClass(JSValue baseClass)
+    public JSValue DefineClass(JSValue baseClass = default)
     {
         if (_constructorDescriptor == null)
         {

@@ -13,7 +13,7 @@ public class TestBasicTypesBoolean : TestHelper, ITestObject
     private static JSValue CreateBooleanFromPrimitive(JSCallbackArgs args)
         => (bool)args[0];
 
-    public JSObject Init() => new()
+    public JSObject Init() => new JSObject.Builder()
     {
         Method(CreateBoolean),
         Method(CreateBooleanFromPrimitive),
