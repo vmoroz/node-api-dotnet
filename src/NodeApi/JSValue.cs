@@ -25,7 +25,11 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// Creates an empty instance of <see cref="JSValue" />, which implicitly converts to
     /// <see cref="JSValue.Undefined" /> when used in any scope.
     /// </summary>
-    public JSValue() : this(default, null) { }
+    public JSValue()
+    {
+        _handle = default;
+        _scope = null;
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the current scope.
@@ -35,7 +39,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
     /// </remarks>
-    public JSValue(napi_value handle) : this(handle, JSValueScope.Current) { }
+    public JSValue(napi_value handle) : this(handle, Current) { }
 
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
@@ -47,17 +51,9 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
     /// </remarks>
-    public JSValue(napi_value handle, JSValueScope? scope)
+    public JSValue(napi_value handle, JSValueScope scope)
     {
-        if (scope is null)
-        {
-            if (!handle.IsNull) throw new ArgumentNullException(nameof(scope));
-        }
-        else
-        {
-            if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
-        }
-
+        if (handle.IsNull) throw new ArgumentNullException(nameof(handle));
         _handle = handle;
         _scope = scope;
     }
@@ -77,7 +73,7 @@ public readonly struct JSValue : IEquatable<JSValue>
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return Undefined._handle;
+                return GetCurrentRuntime(out napi_env env).GetUndefined(env, out napi_value result).ThrowIfFailed(result);
             }
 
             // Ensure the scope is valid and on the current thread (environment).
@@ -102,8 +98,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// </summary>
     internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
 
-    public static JSValue Undefined
-        => CurrentRuntime.GetUndefined(CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
+    public static JSValue Undefined => default;
     public static JSValue Null
         => CurrentRuntime.GetNull(CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
     public static JSValue Global
@@ -323,6 +318,43 @@ public readonly struct JSValue : IEquatable<JSValue>
             .ThrowIfFailed(result);
     }
 
+    public JSValueType TypeOf() => _handle.IsNull
+        ? JSValueType.Undefined
+        : GetRuntime(out napi_env env).GetValueType(env, _handle, out napi_valuetype result)
+            .ThrowIfFailed((JSValueType)result);
+
+    public bool IsUndefined() => TypeOf() == JSValueType.Undefined;
+
+    public bool IsNull() => TypeOf() == JSValueType.Null;
+
+    public bool IsNullOrUndefined() => TypeOf() switch
+    {
+        JSValueType.Null => true,
+        JSValueType.Undefined => true,
+        _ => false,
+    };
+
+    public bool IsBoolean() => TypeOf() == JSValueType.Boolean;
+
+    public bool IsNumber() => TypeOf() == JSValueType.Number;
+
+    public bool IsString() => TypeOf() == JSValueType.String;
+
+    public bool IsSymbol() => TypeOf() == JSValueType.Symbol;
+
+    public bool IsObject() => TypeOf() switch
+    {
+        JSValueType.Object => true,
+        JSValueType.Function => true,
+        _ => false,
+    };
+
+    public bool IsFunction() => TypeOf() == JSValueType.Function;
+
+    public bool IsExternal() => TypeOf() == JSValueType.External;
+
+    public bool IsBigInt() => TypeOf() == JSValueType.BigInt;
+
     public static implicit operator JSValue(bool value) => GetBoolean(value);
     public static implicit operator JSValue(sbyte value) => CreateNumber(value);
     public static implicit operator JSValue(byte value) => CreateNumber(value);
@@ -419,5 +451,21 @@ public readonly struct JSValue : IEquatable<JSValue>
     {
         throw new NotSupportedException(
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
+    }
+
+    private JSRuntime GetRuntime(out napi_env env)
+    {
+        JSValueScope scope = _scope ?? throw new ArgumentNullException(nameof(scope));
+        scope.ThrowIfDisposed();
+        scope.ThrowIfInvalidThreadAccess();
+        env = scope.UncheckedEnvironmentHandle;
+        return scope.Runtime;
+    }
+
+    private static JSRuntime GetCurrentRuntime(out napi_env env)
+    {
+        JSValueScope scope = Current;
+        env = scope.UncheckedEnvironmentHandle;
+        return scope.Runtime;
     }
 }

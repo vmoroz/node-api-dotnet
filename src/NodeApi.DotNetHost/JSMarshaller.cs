@@ -87,7 +87,7 @@ public class JSMarshaller
         typeof(JSValue).GetIndexer(typeof(string))!;
 
     private static readonly MethodInfo s_isNullOrUndefined =
-        typeof(JSNativeApi).GetStaticMethod(nameof(JSNativeApi.IsNullOrUndefined))!;
+        typeof(JSValue).GetMethod(nameof(JSValue.IsNullOrUndefined))!;
 
     private static readonly PropertyInfo s_callbackArg =
         typeof(JSCallbackArgs).GetIndexer(typeof(int))!;
@@ -1752,7 +1752,7 @@ public class JSMarshaller
         if (nullableType != null)
         {
             convertExpression = Expression.Condition(
-                Expression.Call(s_isNullOrUndefined, argExpression),
+                Expression.Call(argExpression, s_isNullOrUndefined),
                 Expression.Constant(null, nullableType),
                 Expression.Convert(convertExpression, nullableType));
         }
@@ -2068,12 +2068,10 @@ public class JSMarshaller
 
         if (nullableType != null)
         {
-            MethodInfo isNullOrUndefinedMethod =
-                typeof(JSNativeApi).GetMethod(nameof(JSNativeApi.IsNullOrUndefined))!;
             statements = new Expression[]
             {
                 Expression.Condition(
-                    Expression.Call(isNullOrUndefinedMethod, valueParameter),
+                    Expression.Call(valueParameter, s_isNullOrUndefined),
                     Expression.Constant(null, nullableType),
                     Expression.Convert(
                         Expression.Block(toType, variables, statements),

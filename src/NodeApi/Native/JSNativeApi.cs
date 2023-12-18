@@ -29,48 +29,6 @@ public static partial class JSNativeApi
         }
     }
 
-    public static unsafe JSValueType TypeOf(this JSValue thisValue)
-        => thisValue.Runtime.GetValueType(
-            thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out napi_valuetype result)
-            .ThrowIfFailed((JSValueType)result);
-
-    public static unsafe bool IsUndefined(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Undefined;
-
-    public static unsafe bool IsNull(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Null;
-
-    public static unsafe bool IsNullOrUndefined(this JSValue thisValue) => thisValue.TypeOf() switch
-    {
-        JSValueType.Null => true,
-        JSValueType.Undefined => true,
-        _ => false,
-    };
-
-    public static unsafe bool IsBoolean(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Boolean;
-
-    public static unsafe bool IsNumber(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Number;
-
-    public static unsafe bool IsString(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.String;
-
-    public static unsafe bool IsSymbol(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Symbol;
-
-    public static unsafe bool IsObject(this JSValue thisValue)
-    {
-        JSValueType valueType = thisValue.TypeOf();
-        return (valueType == JSValueType.Object) || (valueType == JSValueType.Function);
-    }
-
-    public static unsafe bool IsFunction(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.Function;
-
-    public static unsafe bool IsExternal(this JSValue thisValue)
-        => thisValue.TypeOf() == JSValueType.External;
-
     public static double GetValueDouble(this JSValue thisValue)
         => thisValue.Runtime.GetValueDouble(thisValue.UncheckedEnvironmentHandle, thisValue.Handle, out double result)
             .ThrowIfFailed(result);
