@@ -44,9 +44,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
     /// </summary>
-    /// <exception cref="ArgumentNullException">Thrown when either the handle or scope is null
-    /// (unless they are both null then this becomes an empty value that implicitly converts
-    /// to <see cref="JSValue.Undefined"/>).</exception>
+    /// <exception cref="ArgumentNullException">Thrown when the handle is null</exception>
     /// <remarks>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
@@ -73,7 +71,8 @@ public readonly struct JSValue : IEquatable<JSValue>
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return GetCurrentRuntime(out napi_env env).GetUndefined(env, out napi_value result).ThrowIfFailed(result);
+                return GetCurrentRuntime(out napi_env env)
+                    .GetUndefined(env, out napi_value result).ThrowIfFailed(result);
             }
 
             // Ensure the scope is valid and on the current thread (environment).
