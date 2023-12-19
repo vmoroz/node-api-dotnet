@@ -91,14 +91,6 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator napi_value(JSValue value) => value.Handle;
     public static explicit operator napi_value(JSValue? value) => value?.Handle ?? default;
 
-    /// <summary>
-    /// Gets the environment handle for the value's scope without checking whether the scope
-    /// is disposed or whether access from the current thread is valid. WARNING: This must only
-    /// be used to avoid redundant handle checks when there is another (checked) access to
-    /// <see cref="Handle" /> for the same call.
-    /// </summary>
-    internal napi_env UncheckedEnvironmentHandle => Scope.UncheckedEnvironmentHandle;
-
     public static JSValue Undefined => default;
     public static JSValue Null => GetCurrentRuntime(out napi_env env)
         .GetNull(env, out napi_value result).ThrowIfFailed(result);
@@ -115,20 +107,20 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public JSValue this[JSValue name]
     {
-        get => this.GetProperty(name);
-        set => this.SetProperty(name, value);
+        get => GetProperty(name);
+        set => SetProperty(name, value);
     }
 
     public JSValue this[string name]
     {
-        get => this.GetProperty(name);
-        set => this.SetProperty(name, value);
+        get => GetProperty(name);
+        set => SetProperty(name, value);
     }
 
     public JSValue this[int index]
     {
-        get => this.GetElement(index);
-        set => this.SetElement(index, value);
+        get => GetElement(index);
+        set => SetElement(index, value);
     }
 
     public static JSValue CreateObject() => GetCurrentRuntime(out napi_env env)
@@ -682,10 +674,10 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Attaches an object to the JSValue.
+    /// Attaches an object to this JSValue.
     /// </summary>
     /// <param name="value">The object to be wrapped.</param>
-    /// <returns>Copy of JSValue struct.</returns>
+    /// <returns>Copy of this JSValue struct.</returns>
     public unsafe JSValue Wrap(object value)
     {
         JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
@@ -702,10 +694,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Attaches an object to a JS wrapper.
+    /// Attaches an object to this JSValue.
     /// </summary>
-    /// <param name="wrapper">The JS wrapper value, typically the 'this' argument to a class
-    /// constructor callback.</param>
     /// <param name="value">The object to be wrapped.</param>
     /// <param name="wrapperWeakRef">Returns a weak reference to the JS wrapper.</param>
     /// <returns>The JS wrapper.</returns>
@@ -725,9 +715,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Attempts to get the object that was previously attached to a JS wrapper.
+    /// Attempts to get the object that was previously attached to this JSValue.
     /// </summary>
-    /// <param name="thisValue">The JS wrapper value.</param>
     /// <returns>The unwrapped object, or null if nothing was wrapped.</returns>
     public object? TryUnwrap()
     {
@@ -746,7 +735,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Gets the object that was previously attached to a JS wrapper.
+    /// Gets the object that was previously attached to this JSValue.
     /// (Throws an exception if unwrapping failed.)
     /// </summary>
     public object Unwrap(string? unwrapType = null)
@@ -764,9 +753,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Detaches an object from a JS wrapper.
+    /// Detaches an object from this JSValue.
     /// </summary>
-    /// <param name="thisValue">The JS wrapper value.</param>
     /// <param name="value">Returns the wrapped object, or null if nothing was wrapped.</param>
     /// <returns>True if a wrapped object was found and removed, else false.</returns>
     public bool RemoveWrap(out object? value)
