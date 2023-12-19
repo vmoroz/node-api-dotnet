@@ -47,14 +47,14 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
 
     public bool TryUnwrap<T>(out T? target) where T : class
     {
-        if (!_value.TryUnwrap2(out object? unwrapped))
+        if (_value.TryUnwrap() is object unwrapped)
         {
-            target = null;
-            return false;
+            target = unwrapped as T;
+            return true;
         }
 
-        target = unwrapped as T;
-        return true;
+        target = null;
+        return false;
     }
 
     public T Unwrap<T>() where T : class

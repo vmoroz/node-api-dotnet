@@ -733,29 +733,6 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// Attempts to get the object that was previously attached to a JS wrapper.
     /// </summary>
     /// <param name="thisValue">The JS wrapper value.</param>
-    /// <param name="value">Returns the wrapped object, or null if nothing was wrapped.</param>
-    /// <returns>True if a wrapped object was found and returned, else false.</returns>
-    public bool TryUnwrap2(out object? value)
-    {
-        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
-
-        // The invalid arg error code is returned if there was nothing to unwrap. It doesn't
-        // distinguish from an invalid handle, but either way the unwrap failed.
-        if (status == napi_status.napi_invalid_arg)
-        {
-            value = null;
-            return false;
-        }
-
-        status.ThrowIfFailed();
-        value = GCHandle.FromIntPtr(result).Target;
-        return true;
-    }
-
-    /// <summary>
-    /// Attempts to get the object that was previously attached to a JS wrapper.
-    /// </summary>
-    /// <param name="thisValue">The JS wrapper value.</param>
     /// <returns>The unwrapped object, or null if nothing was wrapped.</returns>
     public object? TryUnwrap()
     {
