@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.JavaScript.NodeApi.Interop;
 using Microsoft.JavaScript.NodeApi.Runtime;
-using static Microsoft.JavaScript.NodeApi.JSNativeApi;
 using static Microsoft.JavaScript.NodeApi.JSValueScope;
 using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
@@ -418,51 +417,48 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public void SetProperty(JSValue key, JSValue value)
         => GetRuntime(out napi_env env, out napi_value handle)
-            .SetProperty(env, handle, key.Handle, value.Handle)
-            .ThrowIfFailed();
+            .SetProperty(env, handle, key.Handle, value.Handle).ThrowIfFailed();
 
     public bool HasProperty(JSValue key)
         => GetRuntime(out napi_env env, out napi_value handle)
-        .HasProperty(env, handle, key.Handle, out bool result)
-            .ThrowIfFailed(result);
+            .HasProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
 
     public JSValue GetProperty(JSValue key)
         => GetRuntime(out napi_env env, out napi_value handle)
-            .GetProperty(env, handle, key.Handle, out napi_value result)
-            .ThrowIfFailed(result);
+            .GetProperty(env, handle, key.Handle, out napi_value result).ThrowIfFailed(result);
 
-    public bool DeleteProperty(JSValue key) => GetRuntime(out napi_env env, out napi_value handle)
-        .DeleteProperty(env, handle, key.Handle, out bool result)
-            .ThrowIfFailed(result);
+    public bool DeleteProperty(JSValue key)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .DeleteProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
 
-    public bool HasOwnProperty(JSValue key) => GetRuntime(out napi_env env, out napi_value handle)
-        .HasOwnProperty(env, handle, key.Handle, out bool result)
-            .ThrowIfFailed(result);
+    public bool HasOwnProperty(JSValue key)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .HasOwnProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
 
     public void SetElement(int index, JSValue value)
         => GetRuntime(out napi_env env, out napi_value handle)
-    .SetElement(
-            env, handle, (uint)index, value.Handle)
-            .ThrowIfFailed();
+            .SetElement(env, handle, (uint)index, value.Handle).ThrowIfFailed();
 
-    public bool HasElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
-            .HasElement(env, handle, (uint)index, out bool result)
-            .ThrowIfFailed(result);
+    public bool HasElement(int index)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .HasElement(env, handle, (uint)index, out bool result).ThrowIfFailed(result);
 
-    public JSValue GetElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
-        .GetElement(env, handle, (uint)index, out napi_value result)
-            .ThrowIfFailed(result);
+    public JSValue GetElement(int index)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetElement(env, handle, (uint)index, out napi_value result).ThrowIfFailed(result);
 
-    public bool DeleteElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
-        .DeleteElement(env, handle, (uint)index, out bool result)
-            .ThrowIfFailed(result);
+    public bool DeleteElement(int index)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .DeleteElement(env, handle, (uint)index, out bool result).ThrowIfFailed(result);
 
     public unsafe void DefineProperties(IReadOnlyCollection<JSPropertyDescriptor> descriptors)
     {
         JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
-            runtime.DefineProperties(env, handle, descriptorsPtr)
-                .ThrowIfFailed());
+        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(
+            string.Empty,
+            descriptors,
+            (_, descriptorsPtr) => runtime.DefineProperties(env, handle, descriptorsPtr)
+            .ThrowIfFailed());
         foreach (nint descriptorHandle in descriptorHandles)
         {
             AddGCHandleFinalizer(descriptorHandle);
@@ -472,9 +468,11 @@ public readonly struct JSValue : IEquatable<JSValue>
     public unsafe void DefineProperties(params JSPropertyDescriptor[] descriptors)
     {
         JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
-                runtime.DefineProperties(env, handle, descriptorsPtr)
-                    .ThrowIfFailed());
+        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(
+            string.Empty,
+            descriptors,
+            (_, descriptorsPtr) => runtime.DefineProperties(env, handle, descriptorsPtr)
+            .ThrowIfFailed());
         foreach (nint descriptorHandle in descriptorHandles)
         {
             AddGCHandleFinalizer(descriptorHandle);
@@ -482,25 +480,28 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     public bool IsArray() => GetRuntime(out napi_env env, out napi_value handle)
-        .IsArray(env, handle, out bool result)
-            .ThrowIfFailed(result);
+        .IsArray(env, handle, out bool result).ThrowIfFailed(result);
 
     public int GetArrayLength() => GetRuntime(out napi_env env, out napi_value handle)
-        .GetArrayLength(env, handle, out int result)
-            .ThrowIfFailed(result);
+        .GetArrayLength(env, handle, out int result).ThrowIfFailed(result);
 
     // Internal because JSValue structs all implement IEquatable<JSValue>, which calls this method.
     internal bool StrictEquals(JSValue other) => GetRuntime(out napi_env env, out napi_value handle)
-        .StrictEquals(env, handle, other.Handle, out bool result)
-            .ThrowIfFailed(result);
+        .StrictEquals(env, handle, other.Handle, out bool result).ThrowIfFailed(result);
 
-    public unsafe JSValue Call() => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
-        .CallFunction(env, GetUndefined(runtime, env), handle, new ReadOnlySpan<napi_value>(), out napi_value result).ThrowIfFailed(result);
+    public unsafe JSValue Call()
+        => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
+            .CallFunction(
+                env,
+                GetUndefined(runtime, env),
+                handle,
+                new ReadOnlySpan<napi_value>(),
+                out napi_value result).ThrowIfFailed(result);
 
     public unsafe JSValue Call(JSValue thisArg)
         => GetRuntime(out napi_env env, out napi_value handle)
-        .CallFunction(env, thisArg.Handle, handle, Array.Empty<napi_value>(), out napi_value result)
-        .ThrowIfFailed(result);
+            .CallFunction(env, thisArg.Handle, handle, [], out napi_value result)
+            .ThrowIfFailed(result);
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0)
     {
@@ -655,16 +656,9 @@ public readonly struct JSValue : IEquatable<JSValue>
         napi_callback callback,
         nint data,
         ReadOnlySpan<napi_property_descriptor> descriptors)
-    {
-        return CurrentRuntime.DefineClass(
-            CurrentEnvironmentHandle,
-            name,
-            callback,
-            data,
-            descriptors,
-            out napi_value result)
+        => GetCurrentRuntime(out napi_env env)
+            .DefineClass(env, name, callback, data, descriptors, out napi_value result)
             .ThrowIfFailed(result);
-    }
 
     public static unsafe JSValue DefineClass(
         string name,
@@ -688,21 +682,21 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     /// <summary>
-    /// Attaches an object to a JS wrapper.
+    /// Attaches an object to the JSValue.
     /// </summary>
-    /// <param name="wrapper">The JS wrapper value, typically the 'this' argument to a class
-    /// constructor callback.</param>
     /// <param name="value">The object to be wrapped.</param>
-    /// <returns>The JS wrapper.</returns>
+    /// <returns>Copy of JSValue struct.</returns>
     public unsafe JSValue Wrap(object value)
     {
-        GCHandle valueHandle = Scope.RuntimeContext.AllocGCHandle(value);
-        Runtime.Wrap(
-            UncheckedEnvironmentHandle,
-            Handle,
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        GCHandle valueHandle = _scope!.RuntimeContext.AllocGCHandle(value);
+        runtime.Wrap(
+            env,
+            handle,
             (nint)valueHandle,
             new napi_finalize(s_finalizeGCHandle),
-            Scope.RuntimeContextHandle,
+            _scope!.RuntimeContextHandle,
+            // TODO: (vmoroz) add override without out parameter.
             out _).ThrowIfFailed();
         return this;
     }
@@ -717,13 +711,14 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// <returns>The JS wrapper.</returns>
     public unsafe JSValue Wrap(object value, out JSReference wrapperWeakRef)
     {
-        GCHandle valueHandle = Scope.RuntimeContext.AllocGCHandle(value);
-        Runtime.Wrap(
-            UncheckedEnvironmentHandle,
-            Handle,
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        GCHandle valueHandle = _scope!.RuntimeContext.AllocGCHandle(value);
+        runtime.Wrap(
+            env,
+            handle,
             (nint)valueHandle,
             new napi_finalize(s_finalizeGCHandle),
-            Scope.RuntimeContextHandle,
+            _scope!.RuntimeContextHandle,
             out napi_ref weakRef).ThrowIfFailed();
         wrapperWeakRef = new JSReference(weakRef, isWeak: true);
         return this;
@@ -736,7 +731,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// <returns>The unwrapped object, or null if nothing was wrapped.</returns>
     public object? TryUnwrap()
     {
-        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        napi_status status = runtime.Unwrap(env, handle, out nint result);
 
         // The invalid arg error code is returned if there was nothing to unwrap. It doesn't
         // distinguish from an invalid handle, but either way the unwrap failed.
@@ -755,7 +751,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// </summary>
     public object Unwrap(string? unwrapType = null)
     {
-        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        napi_status status = runtime.Unwrap(env, handle, out nint result);
 
         if (status == napi_status.napi_invalid_arg && unwrapType != null)
         {
@@ -774,7 +771,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// <returns>True if a wrapped object was found and removed, else false.</returns>
     public bool RemoveWrap(out object? value)
     {
-        napi_status status = Runtime.RemoveWrap(UncheckedEnvironmentHandle, Handle, out nint result);
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        napi_status status = runtime.RemoveWrap(env, handle, out nint result);
 
         // The invalid arg error code is returned if there was nothing to remove.
         if (status == napi_status.napi_invalid_arg)
@@ -794,8 +792,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// </summary>
     public unsafe object GetValueExternal()
     {
-        Runtime.GetValueExternal(UncheckedEnvironmentHandle, Handle, out nint result)
-            .ThrowIfFailed();
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetValueExternal(env, handle, out nint result).ThrowIfFailed();
         return GCHandle.FromIntPtr(result).Target!;
     }
 
@@ -805,8 +803,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// </summary>
     public unsafe object? TryGetValueExternal()
     {
-        napi_status status = Runtime.GetValueExternal(
-            UncheckedEnvironmentHandle, Handle, out nint result);
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        napi_status status = runtime.GetValueExternal(env, handle, out nint result);
 
         // The invalid arg error code is returned if there was no external value.
         if (status == napi_status.napi_invalid_arg)
@@ -818,23 +816,18 @@ public readonly struct JSValue : IEquatable<JSValue>
         return GCHandle.FromIntPtr(result).Target!;
     }
 
-    public JSReference CreateReference()
-        => new(this);
+    public JSReference CreateReference() => new(this);
 
-    public JSReference CreateWeakReference()
-        => new(this, isWeak: true);
+    public JSReference CreateWeakReference() => new(this, isWeak: true);
 
-    public bool IsError()
-        => Runtime.IsError(
-            UncheckedEnvironmentHandle, Handle, out bool result).ThrowIfFailed(result);
+    public bool IsError() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsError(env, handle, out bool result).ThrowIfFailed(result);
 
-    public static bool IsExceptionPending()
-        => CurrentRuntime.IsExceptionPending(
-            CurrentEnvironmentHandle, out bool result).ThrowIfFailed(result);
+    public static bool IsExceptionPending() => GetCurrentRuntime(out napi_env env)
+        .IsExceptionPending(env, out bool result).ThrowIfFailed(result);
 
-    public static JSValue GetAndClearLastException()
-        => CurrentRuntime.GetAndClearLastException(
-            CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
+    public static JSValue GetAndClearLastException() => GetCurrentRuntime(out napi_env env)
+        .GetAndClearLastException(env, out napi_value result).ThrowIfFailed(result);
 
     public bool IsArrayBuffer() => GetRuntime(out napi_env env, out napi_value handle)
         .IsArrayBuffer(env, handle, out bool result).ThrowIfFailed(result);
@@ -842,16 +835,14 @@ public readonly struct JSValue : IEquatable<JSValue>
     public unsafe Span<byte> GetArrayBufferInfo()
     {
         JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        runtime.GetArrayBufferInfo(env, handle, out nint data, out nuint length)
-            .ThrowIfFailed();
+        runtime.GetArrayBufferInfo(env, handle, out nint data, out nuint length).ThrowIfFailed();
         return new Span<byte>((void*)data, (int)length);
     }
 
     public bool IsTypedArray() => GetRuntime(out napi_env env, out napi_value handle)
         .IsTypedArray(env, handle, out bool result).ThrowIfFailed(result);
 
-    public unsafe int GetTypedArrayLength(
-        out JSTypedArrayType type)
+    public unsafe int GetTypedArrayLength(out JSTypedArrayType type)
     {
         JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
         runtime.GetTypedArrayInfo(
@@ -942,74 +933,64 @@ public readonly struct JSValue : IEquatable<JSValue>
         byteOffset = (int)byteOffset_;
     }
 
-    public static uint GetVersion()
-        => CurrentRuntime.GetVersion(CurrentEnvironmentHandle, out uint result).ThrowIfFailed(result);
+    public static uint GetVersion() => GetCurrentRuntime(out napi_env env)
+        .GetVersion(env, out uint result).ThrowIfFailed(result);
 
     public bool IsPromise() => GetRuntime(out napi_env env, out napi_value handle)
         .IsPromise(env, handle, out bool result).ThrowIfFailed(result);
 
     public static JSValue RunScript(JSValue script)
-        => script.Runtime.RunScript(script.UncheckedEnvironmentHandle, script.Handle, out napi_value result)
-            .ThrowIfFailed(result);
+        => script.GetRuntime(out napi_env env, out napi_value handle)
+            .RunScript(env, handle, out napi_value result).ThrowIfFailed(result);
 
-    public bool IsDate()
-        => Runtime.IsDate(UncheckedEnvironmentHandle, Handle, out bool result)
-            .ThrowIfFailed(result);
+    public bool IsDate() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsDate(env, handle, out bool result).ThrowIfFailed(result);
 
-    public double GetDateValue()
-        => Runtime.GetValueDate(UncheckedEnvironmentHandle, Handle, out double result)
-            .ThrowIfFailed(result);
+    public double GetDateValue() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueDate(env, handle, out double result).ThrowIfFailed(result);
 
     public unsafe void AddFinalizer(Action finalize)
     {
-        JSValueScope currentScope = Scope;
-        GCHandle finalizeHandle = currentScope.RuntimeContext.AllocGCHandle(finalize);
-        Runtime.AddFinalizer(
-            UncheckedEnvironmentHandle,
-            Handle,
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        GCHandle finalizeHandle = _scope!.RuntimeContext.AllocGCHandle(finalize);
+        runtime.AddFinalizer(
+            env,
+            handle,
             (nint)finalizeHandle,
             new napi_finalize(s_callFinalizeAction),
-            currentScope.RuntimeContextHandle,
+            _scope!.RuntimeContextHandle,
+            // TODO: (vmoroz) add override without out parameter.
             out _).ThrowIfFailed();
     }
 
     public unsafe void AddFinalizer(Action finalize, out JSReference finalizerRef)
     {
-        JSValueScope currentScope = Scope;
-        GCHandle finalizeHandle = currentScope.RuntimeContext.AllocGCHandle(finalize);
-        Runtime.AddFinalizer(
-            UncheckedEnvironmentHandle,
-            Handle,
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        GCHandle finalizeHandle = _scope!.RuntimeContext.AllocGCHandle(finalize);
+        runtime.AddFinalizer(
+            env,
+            handle,
             (nint)finalizeHandle,
             new napi_finalize(s_callFinalizeAction),
-            currentScope.RuntimeContextHandle,
+            _scope!.RuntimeContextHandle,
             out napi_ref reference).ThrowIfFailed();
         finalizerRef = new JSReference(reference, isWeak: true);
     }
 
     public long GetValueBigIntInt64(out bool isLossless)
-    {
-        Runtime.GetValueBigInt64(
-            UncheckedEnvironmentHandle, Handle, out long result, out isLossless).ThrowIfFailed();
-        return result;
-    }
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetValueBigInt64(env, handle, out long result, out isLossless).ThrowIfFailed(result);
 
     public ulong GetValueBigIntUInt64(out bool isLossless)
-    {
-        Runtime.GetValueBigInt64(
-            UncheckedEnvironmentHandle, Handle, out ulong result, out isLossless).ThrowIfFailed();
-        return result;
-    }
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetValueBigInt64(env, handle, out ulong result, out isLossless).ThrowIfFailed(result);
 
     public unsafe ulong[] GetValueBigIntWords(out int signBit)
     {
-        Runtime.GetValueBigInt(
-            UncheckedEnvironmentHandle, Handle, out _, [], out nuint wordCount)
-                .ThrowIfFailed();
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetValueBigInt(env, handle, out _, [], out nuint wordCount).ThrowIfFailed();
         ulong[] words = new ulong[wordCount];
-        Runtime.GetValueBigInt(
-            UncheckedEnvironmentHandle, Handle, out signBit, words.AsSpan(), out _)
-                .ThrowIfFailed();
+        runtime.GetValueBigInt(env, handle, out signBit, words.AsSpan(), out _).ThrowIfFailed();
         return words;
     }
 
@@ -1026,9 +1007,12 @@ public readonly struct JSValue : IEquatable<JSValue>
                 (napi_key_conversion)conversion,
                 out napi_value result).ThrowIfFailed(result);
 
+    //TODO: (vmoroz) What env parameter does here?
+    //TODO: (vmoroz) Move instance data to somewhere else. It must be not in the public API
     internal static unsafe void SetInstanceData(napi_env env, object? data)
     {
-        CurrentRuntime.GetInstanceData(env, out nint handlePtr).ThrowIfFailed();
+        JSRuntime runtime = CurrentRuntime;
+        runtime.GetInstanceData(env, out nint handlePtr).ThrowIfFailed();
         if (handlePtr != default)
         {
             // Current napi_set_instance_data implementation does not call finalizer when we replace existing instance data.
@@ -1039,7 +1023,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         if (data != null)
         {
             GCHandle handle = GCHandle.Alloc(data);
-            CurrentRuntime.SetInstanceData(
+            runtime.SetInstanceData(
               env,
               (nint)handle,
               new napi_finalize(s_finalizeGCHandleToDisposable),
@@ -1057,18 +1041,15 @@ public readonly struct JSValue : IEquatable<JSValue>
         .DetachArrayBuffer(env, handle).ThrowIfFailed();
 
     public bool IsDetachedArrayBuffer() => GetRuntime(out napi_env env, out napi_value handle)
-        .IsDetachedArrayBuffer(env, handle, out bool result)
-            .ThrowIfFailed(result);
+        .IsDetachedArrayBuffer(env, handle, out bool result).ThrowIfFailed(result);
 
     public void SetObjectTypeTag(Guid typeTag)
         => GetRuntime(out napi_env env, out napi_value handle)
-            .SetObjectTypeTag(env, handle, typeTag)
-            .ThrowIfFailed();
+            .SetObjectTypeTag(env, handle, typeTag).ThrowIfFailed();
 
     public bool CheckObjectTypeTag(Guid typeTag)
         => GetRuntime(out napi_env env, out napi_value handle)
-            .CheckObjectTypeTag(env, handle, typeTag, out bool result)
-            .ThrowIfFailed(result);
+            .CheckObjectTypeTag(env, handle, typeTag, out bool result).ThrowIfFailed(result);
 
     public void Freeze() => GetRuntime(out napi_env env, out napi_value handle)
         .Freeze(env, handle).ThrowIfFailed();
