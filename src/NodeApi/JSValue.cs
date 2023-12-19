@@ -177,7 +177,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         }
     }
 
-    public static JSValue CreateSymbol(JSValue description) => GetCurrentRuntime (out napi_env env)
+    public static JSValue CreateSymbol(JSValue description) => GetCurrentRuntime(out napi_env env)
         .CreateSymbol(env, (napi_value)description, out napi_value result).ThrowIfFailed(result);
 
     public static JSValue SymbolFor(string name) => GetCurrentRuntime(out napi_env env)
@@ -344,6 +344,71 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public bool IsBigInt() => TypeOf() == JSValueType.BigInt;
 
+    public double GetValueDouble() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueDouble(env, handle, out double result).ThrowIfFailed(result);
+
+    public int GetValueInt32() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueInt32(env, handle, out int result).ThrowIfFailed(result);
+
+    public uint GetValueUInt32() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueUInt32(env, handle, out uint result).ThrowIfFailed(result);
+
+    public long GetValueInt64() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueInt64(env, handle, out long result).ThrowIfFailed(result);
+
+    public bool GetValueBool() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetValueBool(env, handle, out bool result).ThrowIfFailed(result);
+
+    public int GetValueStringUtf8(Span<byte> buffer)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetValueStringUtf8(env, handle, buffer, out int result)
+            .ThrowIfFailed(result);
+
+    public byte[] GetValueStringUtf8()
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetValueStringUtf8(env, handle, [], out int length).ThrowIfFailed();
+        byte[] result = new byte[length + 1];
+        runtime.GetValueStringUtf8(env, handle, new Span<byte>(result), out _).ThrowIfFailed();
+        // Remove the zero terminating character
+        Array.Resize(ref result, length);
+        return result;
+    }
+
+    public unsafe int GetValueStringUtf16(Span<char> buffer)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetValueStringUtf16(env, handle, buffer, out int result)
+            .ThrowIfFailed(result);
+
+    public char[] GetValueStringUtf16AsCharArray()
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetValueStringUtf16(env, handle, [], out int length).ThrowIfFailed();
+        char[] result = new char[length + 1];
+        runtime.GetValueStringUtf16(env, handle, new Span<char>(result), out _).ThrowIfFailed();
+        // Remove the zero terminating character
+        Array.Resize(ref result, length);
+        return result;
+    }
+
+    //TODO: (vmoroz) improve
+    public string GetValueStringUtf16() => new(GetValueStringUtf16AsCharArray());
+
+    public JSValue CoerceToBoolean() => GetRuntime(out napi_env env, out napi_value handle)
+        .CoerceToBool(env, handle, out napi_value result).ThrowIfFailed(result);
+
+    public JSValue CoerceToNumber() => GetRuntime(out napi_env env, out napi_value handle)
+        .CoerceToNumber(env, handle, out napi_value result).ThrowIfFailed(result);
+
+    public JSValue CoerceToObject() => GetRuntime(out napi_env env, out napi_value handle)
+        .CoerceToObject(env, handle, out napi_value result).ThrowIfFailed(result);
+
+    public JSValue CoerceToString() => GetRuntime(out napi_env env, out napi_value handle)
+        .CoerceToString(env, handle, out napi_value result).ThrowIfFailed(result);
+
+    public JSValue GetPrototype() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetPrototype(env, handle, out napi_value result).ThrowIfFailed(result);
+
     public static implicit operator JSValue(bool value) => GetBoolean(value);
     public static implicit operator JSValue(sbyte value) => CreateNumber(value);
     public static implicit operator JSValue(byte value) => CreateNumber(value);
@@ -449,6 +514,26 @@ public readonly struct JSValue : IEquatable<JSValue>
         scope.ThrowIfInvalidThreadAccess();
         env = scope.UncheckedEnvironmentHandle;
         return scope.Runtime;
+    }
+
+    private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
+    {
+        if (_scope is JSValueScope scope)
+        {
+            scope.ThrowIfDisposed();
+            scope.ThrowIfInvalidThreadAccess();
+            env = scope.UncheckedEnvironmentHandle;
+            handle = _handle;
+            return scope.Runtime;
+        }
+        else
+        {
+            scope = Current;
+            env = scope.UncheckedEnvironmentHandle;
+            JSRuntime runtime = scope.Runtime;
+            runtime.GetUndefined(env, out handle).ThrowIfFailed();
+            return runtime;
+        }
     }
 
     private static JSRuntime GetCurrentRuntime(out napi_env env)
