@@ -41,13 +41,13 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
 
     public JSObject Wrap(object target)
     {
-        JSNativeApi.Wrap(_value, target);
+        _value.Wrap(target);
         return this;
     }
 
     public bool TryUnwrap<T>(out T? target) where T : class
     {
-        if (!JSNativeApi.TryUnwrap(_value, out object? unwrapped))
+        if (!_value.TryUnwrap2(out object? unwrapped))
         {
             target = null;
             return false;
@@ -59,7 +59,7 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
 
     public T Unwrap<T>() where T : class
     {
-        return (T)JSNativeApi.Unwrap(_value, typeof(T).Name);
+        return (T)_value.Unwrap(typeof(T).Name);
     }
 
     public JSValue this[JSValue name]

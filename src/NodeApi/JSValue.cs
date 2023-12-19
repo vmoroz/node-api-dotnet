@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.JavaScript.NodeApi.Interop;
 using Microsoft.JavaScript.NodeApi.Runtime;
@@ -409,6 +412,959 @@ public readonly struct JSValue : IEquatable<JSValue>
     public JSValue GetPrototype() => GetRuntime(out napi_env env, out napi_value handle)
         .GetPrototype(env, handle, out napi_value result).ThrowIfFailed(result);
 
+
+    public JSValue GetPropertyNames() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetPropertyNames(env, handle, out napi_value result).ThrowIfFailed(result);
+
+    public void SetProperty(JSValue key, JSValue value)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .SetProperty(env, handle, key.Handle, value.Handle)
+            .ThrowIfFailed();
+
+    public bool HasProperty(JSValue key)
+        => GetRuntime(out napi_env env, out napi_value handle)
+        .HasProperty(env, handle, key.Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public JSValue GetProperty(JSValue key)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetProperty(env, handle, key.Handle, out napi_value result)
+            .ThrowIfFailed(result);
+
+    public bool DeleteProperty(JSValue key) => GetRuntime(out napi_env env, out napi_value handle)
+        .DeleteProperty(env, handle, key.Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public bool HasOwnProperty(JSValue key) => GetRuntime(out napi_env env, out napi_value handle)
+        .HasOwnProperty(env, handle, key.Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public void SetElement(int index, JSValue value)
+        => GetRuntime(out napi_env env, out napi_value handle)
+    .SetElement(
+            env, handle, (uint)index, value.Handle)
+            .ThrowIfFailed();
+
+    public bool HasElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
+            .HasElement(env, handle, (uint)index, out bool result)
+            .ThrowIfFailed(result);
+
+    public JSValue GetElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
+        .GetElement(env, handle, (uint)index, out napi_value result)
+            .ThrowIfFailed(result);
+
+    public bool DeleteElement(int index) => GetRuntime(out napi_env env, out napi_value handle)
+        .DeleteElement(env, handle, (uint)index, out bool result)
+            .ThrowIfFailed(result);
+
+    public unsafe void DefineProperties(IReadOnlyCollection<JSPropertyDescriptor> descriptors)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
+            runtime.DefineProperties(env, handle, descriptorsPtr)
+                .ThrowIfFailed());
+        foreach (nint descriptorHandle in descriptorHandles)
+        {
+            AddGCHandleFinalizer(descriptorHandle);
+        }
+    }
+
+    public unsafe void DefineProperties(params JSPropertyDescriptor[] descriptors)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(string.Empty, descriptors, (_, descriptorsPtr) =>
+                runtime.DefineProperties(env, handle, descriptorsPtr)
+                    .ThrowIfFailed());
+        foreach (nint descriptorHandle in descriptorHandles)
+        {
+            AddGCHandleFinalizer(descriptorHandle);
+        }
+    }
+
+    public bool IsArray() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsArray(env, handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public int GetArrayLength() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetArrayLength(env, handle, out int result)
+            .ThrowIfFailed(result);
+
+    // Internal because JSValue structs all implement IEquatable<JSValue>, which calls this method.
+    internal bool StrictEquals(JSValue other) => GetRuntime(out napi_env env, out napi_value handle)
+        .StrictEquals(env, handle, other.Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public unsafe JSValue Call() => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
+        .CallFunction(env, GetUndefined(runtime, env), handle, new ReadOnlySpan<napi_value>(), out napi_value result).ThrowIfFailed(result);
+
+    public unsafe JSValue Call(JSValue thisArg)
+        => GetRuntime(out napi_env env, out napi_value handle)
+        .CallFunction(env, thisArg.Handle, handle, Array.Empty<napi_value>(), out napi_value result)
+        .ThrowIfFailed(result);
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0)
+    {
+        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1)
+    {
+        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle, arg1.Handle };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1, JSValue arg2)
+    {
+        Span<napi_value> args = stackalloc napi_value[]
+        {
+            arg0.Handle,
+            arg1.Handle,
+            arg2.Handle
+        };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, params JSValue[] args)
+        => Call(thisArg, new ReadOnlySpan<JSValue>(args));
+
+    public unsafe JSValue Call(JSValue thisArg, ReadOnlySpan<JSValue> args)
+    {
+        int argc = args.Length;
+        Span<napi_value> argv = stackalloc napi_value[argc];
+        for (int i = 0; i < argc; ++i)
+        {
+            argv[i] = args[i].Handle;
+        }
+
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(
+            env,
+            thisArg.Handle,
+            handle,
+            argv,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(napi_value thisArg, ReadOnlySpan<napi_value> args)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(
+            env,
+            thisArg,
+            handle,
+            args,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor()
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .NewInstance(env, handle, [], out napi_value result)
+            .ThrowIfFailed(result);
+
+    public unsafe JSValue CallAsConstructor(JSValue arg0)
+    {
+        napi_value argValue0 = arg0.Handle;
+        Span<napi_value> args = stackalloc napi_value[1] { argValue0 };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.NewInstance(env, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1)
+    {
+        Span<napi_value> args = stackalloc napi_value[2] { arg0.Handle, arg1.Handle };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.NewInstance(env, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1, JSValue arg2)
+    {
+        Span<napi_value> args = stackalloc napi_value[3] {
+            arg0.Handle,
+            arg1.Handle,
+            arg2.Handle
+        };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.NewInstance(env, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor(params JSValue[] args)
+        => CallAsConstructor(new ReadOnlySpan<JSValue>(args));
+
+    public unsafe JSValue CallAsConstructor(ReadOnlySpan<JSValue> args)
+    {
+        int argc = args.Length;
+        Span<napi_value> argv = stackalloc napi_value[argc];
+        for (int i = 0; i < argc; ++i)
+        {
+            argv[i] = args[i].Handle;
+        }
+
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.NewInstance(env, handle, argv, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor(ReadOnlySpan<napi_value> args)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.NewInstance(env, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public JSValue CallMethod(JSValue methodName)
+        => GetProperty(methodName).Call(this);
+
+    public JSValue CallMethod(JSValue methodName, JSValue arg0)
+        => GetProperty(methodName).Call(this, arg0);
+
+    public JSValue CallMethod(
+        JSValue methodName, JSValue arg0, JSValue arg1)
+        => GetProperty(methodName).Call(this, arg0, arg1);
+
+    public JSValue CallMethod(JSValue methodName, JSValue arg0, JSValue arg1, JSValue arg2)
+        => GetProperty(methodName).Call(this, arg0, arg1, arg2);
+
+    public JSValue CallMethod(JSValue methodName, params JSValue[] args)
+        => GetProperty(methodName).Call(this, args);
+
+    public JSValue CallMethod(JSValue methodName, ReadOnlySpan<JSValue> args)
+        => GetProperty(methodName).Call(this, args);
+
+    public JSValue CallMethod(JSValue methodName, ReadOnlySpan<napi_value> args)
+        => GetProperty(methodName).Call(Handle, args);
+
+    public bool InstanceOf(JSValue constructor)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .InstanceOf(env, handle, constructor.Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public static unsafe JSValue DefineClass(
+        string name,
+        napi_callback callback,
+        nint data,
+        ReadOnlySpan<napi_property_descriptor> descriptors)
+    {
+        return CurrentRuntime.DefineClass(
+            CurrentEnvironmentHandle,
+            name,
+            callback,
+            data,
+            descriptors,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public static unsafe JSValue DefineClass(
+        string name,
+        JSCallbackDescriptor constructorDescriptor,
+        params JSPropertyDescriptor[] propertyDescriptors)
+    {
+        GCHandle descriptorHandle = JSRuntimeContext.Current.AllocGCHandle(constructorDescriptor);
+        JSValue? func = null;
+        napi_callback callback = new(
+            Current?.ScopeType == JSValueScopeType.NoContext
+            ? s_invokeJSCallbackNC : s_invokeJSCallback);
+
+        nint[] handles = ToUnmanagedPropertyDescriptors(
+            name, propertyDescriptors, (name, descriptorsPtr) =>
+            {
+                func = DefineClass(name, callback, (nint)descriptorHandle, descriptorsPtr);
+            });
+        func!.Value.AddGCHandleFinalizer((nint)descriptorHandle);
+        Array.ForEach(handles, handle => func!.Value.AddGCHandleFinalizer(handle));
+        return func!.Value;
+    }
+
+    /// <summary>
+    /// Attaches an object to a JS wrapper.
+    /// </summary>
+    /// <param name="wrapper">The JS wrapper value, typically the 'this' argument to a class
+    /// constructor callback.</param>
+    /// <param name="value">The object to be wrapped.</param>
+    /// <returns>The JS wrapper.</returns>
+    public unsafe JSValue Wrap(object value)
+    {
+        GCHandle valueHandle = Scope.RuntimeContext.AllocGCHandle(value);
+        Runtime.Wrap(
+            UncheckedEnvironmentHandle,
+            Handle,
+            (nint)valueHandle,
+            new napi_finalize(s_finalizeGCHandle),
+            Scope.RuntimeContextHandle,
+            out _).ThrowIfFailed();
+        return this;
+    }
+
+    /// <summary>
+    /// Attaches an object to a JS wrapper.
+    /// </summary>
+    /// <param name="wrapper">The JS wrapper value, typically the 'this' argument to a class
+    /// constructor callback.</param>
+    /// <param name="value">The object to be wrapped.</param>
+    /// <param name="wrapperWeakRef">Returns a weak reference to the JS wrapper.</param>
+    /// <returns>The JS wrapper.</returns>
+    public unsafe JSValue Wrap(object value, out JSReference wrapperWeakRef)
+    {
+        GCHandle valueHandle = Scope.RuntimeContext.AllocGCHandle(value);
+        Runtime.Wrap(
+            UncheckedEnvironmentHandle,
+            Handle,
+            (nint)valueHandle,
+            new napi_finalize(s_finalizeGCHandle),
+            Scope.RuntimeContextHandle,
+            out napi_ref weakRef).ThrowIfFailed();
+        wrapperWeakRef = new JSReference(weakRef, isWeak: true);
+        return this;
+    }
+
+    /// <summary>
+    /// Attempts to get the object that was previously attached to a JS wrapper.
+    /// </summary>
+    /// <param name="thisValue">The JS wrapper value.</param>
+    /// <param name="value">Returns the wrapped object, or null if nothing was wrapped.</param>
+    /// <returns>True if a wrapped object was found and returned, else false.</returns>
+    public bool TryUnwrap2(out object? value)
+    {
+        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
+
+        // The invalid arg error code is returned if there was nothing to unwrap. It doesn't
+        // distinguish from an invalid handle, but either way the unwrap failed.
+        if (status == napi_status.napi_invalid_arg)
+        {
+            value = null;
+            return false;
+        }
+
+        status.ThrowIfFailed();
+        value = GCHandle.FromIntPtr(result).Target;
+        return true;
+    }
+
+    /// <summary>
+    /// Attempts to get the object that was previously attached to a JS wrapper.
+    /// </summary>
+    /// <param name="thisValue">The JS wrapper value.</param>
+    /// <returns>The unwrapped object, or null if nothing was wrapped.</returns>
+    public object? TryUnwrap()
+    {
+        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
+
+        // The invalid arg error code is returned if there was nothing to unwrap. It doesn't
+        // distinguish from an invalid handle, but either way the unwrap failed.
+        if (status == napi_status.napi_invalid_arg)
+        {
+            return null;
+        }
+
+        status.ThrowIfFailed();
+        return GCHandle.FromIntPtr(result).Target;
+    }
+
+    /// <summary>
+    /// Gets the object that was previously attached to a JS wrapper.
+    /// (Throws an exception if unwrapping failed.)
+    /// </summary>
+    public object Unwrap(string? unwrapType = null)
+    {
+        napi_status status = Runtime.Unwrap(UncheckedEnvironmentHandle, Handle, out nint result);
+
+        if (status == napi_status.napi_invalid_arg && unwrapType != null)
+        {
+            throw new JSException(new JSError($"Failed to unwrap object of type '{unwrapType}'"));
+        }
+
+        status.ThrowIfFailed();
+        return GCHandle.FromIntPtr(result).Target!;
+    }
+
+    /// <summary>
+    /// Detaches an object from a JS wrapper.
+    /// </summary>
+    /// <param name="thisValue">The JS wrapper value.</param>
+    /// <param name="value">Returns the wrapped object, or null if nothing was wrapped.</param>
+    /// <returns>True if a wrapped object was found and removed, else false.</returns>
+    public bool RemoveWrap(out object? value)
+    {
+        napi_status status = Runtime.RemoveWrap(UncheckedEnvironmentHandle, Handle, out nint result);
+
+        // The invalid arg error code is returned if there was nothing to remove.
+        if (status == napi_status.napi_invalid_arg)
+        {
+            value = null;
+            return false;
+        }
+
+        status.ThrowIfFailed();
+        value = GCHandle.FromIntPtr(result).Target;
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the object that is represented as an external value.
+    /// (Throws if the JS value is not an external value.)
+    /// </summary>
+    public unsafe object GetValueExternal()
+    {
+        Runtime.GetValueExternal(UncheckedEnvironmentHandle, Handle, out nint result)
+            .ThrowIfFailed();
+        return GCHandle.FromIntPtr(result).Target!;
+    }
+
+    /// <summary>
+    /// Gets the object that is represented as an external value, or null if the JS value
+    /// is not an external value.
+    /// </summary>
+    public unsafe object? TryGetValueExternal()
+    {
+        napi_status status = Runtime.GetValueExternal(
+            UncheckedEnvironmentHandle, Handle, out nint result);
+
+        // The invalid arg error code is returned if there was no external value.
+        if (status == napi_status.napi_invalid_arg)
+        {
+            return null;
+        }
+
+        status.ThrowIfFailed();
+        return GCHandle.FromIntPtr(result).Target!;
+    }
+
+    public JSReference CreateReference()
+        => new(this);
+
+    public JSReference CreateWeakReference()
+        => new(this, isWeak: true);
+
+    public bool IsError()
+        => Runtime.IsError(
+            UncheckedEnvironmentHandle, Handle, out bool result).ThrowIfFailed(result);
+
+    public static bool IsExceptionPending()
+        => CurrentRuntime.IsExceptionPending(
+            CurrentEnvironmentHandle, out bool result).ThrowIfFailed(result);
+
+    public static JSValue GetAndClearLastException()
+        => CurrentRuntime.GetAndClearLastException(
+            CurrentEnvironmentHandle, out napi_value result).ThrowIfFailed(result);
+
+    public bool IsArrayBuffer() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsArrayBuffer(env, handle, out bool result).ThrowIfFailed(result);
+
+    public unsafe Span<byte> GetArrayBufferInfo()
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetArrayBufferInfo(env, handle, out nint data, out nuint length)
+            .ThrowIfFailed();
+        return new Span<byte>((void*)data, (int)length);
+    }
+
+    public bool IsTypedArray() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsTypedArray(env, handle, out bool result).ThrowIfFailed(result);
+
+    public unsafe int GetTypedArrayLength(
+        out JSTypedArrayType type)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetTypedArrayInfo(
+            env,
+            handle,
+            out napi_typedarray_type arrayType,
+            out nuint length,
+            out nint _,
+            out napi_value _,
+            out nuint _).ThrowIfFailed();
+        type = (JSTypedArrayType)(int)arrayType;
+        return (int)length;
+    }
+
+    public unsafe Span<T> GetTypedArrayData<T>() where T : struct
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetTypedArrayInfo(
+            env,
+            handle,
+            out napi_typedarray_type arrayType,
+            out nuint length,
+            out nint data,
+            out napi_value _,
+            out nuint _).ThrowIfFailed();
+        var type = (JSTypedArrayType)(int)arrayType;
+        if (!(default(T) switch
+        {
+            sbyte => type == JSTypedArrayType.Int8,
+            byte => type == JSTypedArrayType.UInt8 || type == JSTypedArrayType.UInt8Clamped,
+            short => type == JSTypedArrayType.Int16,
+            ushort => type == JSTypedArrayType.Int16,
+            int => type == JSTypedArrayType.Int32,
+            uint => type == JSTypedArrayType.UInt32,
+            long => type == JSTypedArrayType.BigInt64,
+            ulong => type == JSTypedArrayType.BigUInt64,
+            float => type == JSTypedArrayType.Float32,
+            double => type == JSTypedArrayType.Float64,
+            _ => throw new InvalidCastException("Invalid typed-array type: " + typeof(T)),
+        }))
+        {
+            throw new InvalidCastException(
+                $"Incorrect typed-array type {typeof(T)} for {type}Array.");
+        }
+
+        return new Span<T>((void*)data, (int)length);
+    }
+
+    public unsafe void GetTypedArrayBuffer(
+        out JSTypedArrayType type,
+        out int length,
+        out JSValue arrayBuffer,
+        out int byteOffset)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetTypedArrayInfo(
+            env,
+            handle,
+            out napi_typedarray_type type_,
+            out nuint length_,
+            out nint _,
+            out napi_value arrayBuffer_,
+            out nuint byteOffset_).ThrowIfFailed();
+        type = (JSTypedArrayType)(int)type_;
+        length = (int)length_;
+        arrayBuffer = arrayBuffer_;
+        byteOffset = (int)byteOffset_;
+    }
+
+    public bool IsDataView() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsDataView(env, handle, out bool result).ThrowIfFailed(result);
+
+    public unsafe void GetDataViewInfo(
+        out ReadOnlySpan<byte> viewSpan,
+        out JSValue arrayBuffer,
+        out int byteOffset)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        runtime.GetDataViewInfo(
+          env,
+          handle,
+          out nuint byteLength,
+          out nint data,
+          out napi_value arrayBuffer_,
+          out nuint byteOffset_).ThrowIfFailed();
+        viewSpan = new ReadOnlySpan<byte>((void*)data, (int)byteLength);
+        arrayBuffer = arrayBuffer_;
+        byteOffset = (int)byteOffset_;
+    }
+
+    public static uint GetVersion()
+        => CurrentRuntime.GetVersion(CurrentEnvironmentHandle, out uint result).ThrowIfFailed(result);
+
+    public bool IsPromise() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsPromise(env, handle, out bool result).ThrowIfFailed(result);
+
+    public static JSValue RunScript(JSValue script)
+        => script.Runtime.RunScript(script.UncheckedEnvironmentHandle, script.Handle, out napi_value result)
+            .ThrowIfFailed(result);
+
+    public bool IsDate()
+        => Runtime.IsDate(UncheckedEnvironmentHandle, Handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public double GetDateValue()
+        => Runtime.GetValueDate(UncheckedEnvironmentHandle, Handle, out double result)
+            .ThrowIfFailed(result);
+
+    public unsafe void AddFinalizer(Action finalize)
+    {
+        JSValueScope currentScope = Scope;
+        GCHandle finalizeHandle = currentScope.RuntimeContext.AllocGCHandle(finalize);
+        Runtime.AddFinalizer(
+            UncheckedEnvironmentHandle,
+            Handle,
+            (nint)finalizeHandle,
+            new napi_finalize(s_callFinalizeAction),
+            currentScope.RuntimeContextHandle,
+            out _).ThrowIfFailed();
+    }
+
+    public unsafe void AddFinalizer(Action finalize, out JSReference finalizerRef)
+    {
+        JSValueScope currentScope = Scope;
+        GCHandle finalizeHandle = currentScope.RuntimeContext.AllocGCHandle(finalize);
+        Runtime.AddFinalizer(
+            UncheckedEnvironmentHandle,
+            Handle,
+            (nint)finalizeHandle,
+            new napi_finalize(s_callFinalizeAction),
+            currentScope.RuntimeContextHandle,
+            out napi_ref reference).ThrowIfFailed();
+        finalizerRef = new JSReference(reference, isWeak: true);
+    }
+
+    public long GetValueBigIntInt64(out bool isLossless)
+    {
+        Runtime.GetValueBigInt64(
+            UncheckedEnvironmentHandle, Handle, out long result, out isLossless).ThrowIfFailed();
+        return result;
+    }
+
+    public ulong GetValueBigIntUInt64(out bool isLossless)
+    {
+        Runtime.GetValueBigInt64(
+            UncheckedEnvironmentHandle, Handle, out ulong result, out isLossless).ThrowIfFailed();
+        return result;
+    }
+
+    public unsafe ulong[] GetValueBigIntWords(out int signBit)
+    {
+        Runtime.GetValueBigInt(
+            UncheckedEnvironmentHandle, Handle, out _, [], out nuint wordCount)
+                .ThrowIfFailed();
+        ulong[] words = new ulong[wordCount];
+        Runtime.GetValueBigInt(
+            UncheckedEnvironmentHandle, Handle, out signBit, words.AsSpan(), out _)
+                .ThrowIfFailed();
+        return words;
+    }
+
+    public JSValue GetAllPropertyNames(
+        JSKeyCollectionMode mode,
+        JSKeyFilter filter,
+        JSKeyConversion conversion)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .GetAllPropertyNames(
+                env,
+                handle,
+                (napi_key_collection_mode)mode,
+                (napi_key_filter)filter,
+                (napi_key_conversion)conversion,
+                out napi_value result).ThrowIfFailed(result);
+
+    internal static unsafe void SetInstanceData(napi_env env, object? data)
+    {
+        CurrentRuntime.GetInstanceData(env, out nint handlePtr).ThrowIfFailed();
+        if (handlePtr != default)
+        {
+            // Current napi_set_instance_data implementation does not call finalizer when we replace existing instance data.
+            // It means that we only remove the GC root, but do not call Dispose.
+            GCHandle.FromIntPtr(handlePtr).Free();
+        }
+
+        if (data != null)
+        {
+            GCHandle handle = GCHandle.Alloc(data);
+            CurrentRuntime.SetInstanceData(
+              env,
+              (nint)handle,
+              new napi_finalize(s_finalizeGCHandleToDisposable),
+              finalizeHint: default).ThrowIfFailed();
+        }
+    }
+
+    internal static object? GetInstanceData(napi_env env)
+    {
+        CurrentRuntime.GetInstanceData(env, out nint data).ThrowIfFailed();
+        return (data != default) ? GCHandle.FromIntPtr(data).Target : null;
+    }
+
+    public void DetachArrayBuffer() => GetRuntime(out napi_env env, out napi_value handle)
+        .DetachArrayBuffer(env, handle).ThrowIfFailed();
+
+    public bool IsDetachedArrayBuffer() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsDetachedArrayBuffer(env, handle, out bool result)
+            .ThrowIfFailed(result);
+
+    public void SetObjectTypeTag(Guid typeTag)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .SetObjectTypeTag(env, handle, typeTag)
+            .ThrowIfFailed();
+
+    public bool CheckObjectTypeTag(Guid typeTag)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .CheckObjectTypeTag(env, handle, typeTag, out bool result)
+            .ThrowIfFailed(result);
+
+    public void Freeze() => GetRuntime(out napi_env env, out napi_value handle)
+        .Freeze(env, handle).ThrowIfFailed();
+
+    public void Seal() => GetRuntime(out napi_env env, out napi_value handle)
+        .Seal(env, handle).ThrowIfFailed();
+
+#if NETFRAMEWORK
+    internal static readonly napi_callback.Delegate s_invokeJSCallback = InvokeJSCallback;
+    internal static readonly napi_callback.Delegate s_invokeJSMethod = InvokeJSMethod;
+    internal static readonly napi_callback.Delegate s_invokeJSGetter = InvokeJSGetter;
+    internal static readonly napi_callback.Delegate s_invokeJSSetter = InvokeJSSetter;
+    internal static readonly napi_callback.Delegate s_invokeJSCallbackNC = InvokeJSCallbackNoContext;
+    internal static readonly napi_callback.Delegate s_invokeJSMethodNC = InvokeJSMethodNoContext;
+    internal static readonly napi_callback.Delegate s_invokeJSGetterNC = InvokeJSGetterNoContext;
+    internal static readonly napi_callback.Delegate s_invokeJSSetterNC = InvokeJSSetterNoContext;
+
+    internal static readonly napi_finalize.Delegate s_finalizeGCHandle = FinalizeGCHandle;
+    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToDisposable = FinalizeGCHandleToDisposable;
+    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToPinnedMemory = FinalizeGCHandleToPinnedMemory;
+    internal static readonly napi_finalize.Delegate s_callFinalizeAction = CallFinalizeAction;
+#else
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSCallback = &InvokeJSCallback;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSMethod = &InvokeJSMethod;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSGetter = &InvokeJSGetter;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSSetter = &InvokeJSSetter;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSCallbackNC = &InvokeJSCallbackNoContext;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSMethodNC = &InvokeJSMethodNoContext;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSGetterNC = &InvokeJSGetterNoContext;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, napi_callback_info, napi_value> s_invokeJSSetterNC = &InvokeJSSetterNoContext;
+
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, nint, nint, void> s_finalizeGCHandle = &FinalizeGCHandle;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, nint, nint, void> s_finalizeGCHandleToDisposable = &FinalizeGCHandleToDisposable;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, nint, nint, void> s_finalizeGCHandleToPinnedMemory = &FinalizeGCHandleToPinnedMemory;
+    internal static readonly unsafe delegate* unmanaged[Cdecl]
+        <napi_env, nint, nint, void> s_callFinalizeAction = &CallFinalizeAction;
+#endif
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static unsafe napi_value InvokeJSCallback(
+        napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSCallbackDescriptor>(
+            env, callbackInfo, JSValueScopeType.Callback, (descriptor) => descriptor);
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe napi_value InvokeJSMethod(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.Callback, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Method!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe napi_value InvokeJSGetter(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.Callback, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Getter!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static napi_value InvokeJSSetter(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.Callback, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Setter!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static unsafe napi_value InvokeJSCallbackNoContext(
+        napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSCallbackDescriptor>(
+            env, callbackInfo, JSValueScopeType.NoContext, (descriptor) => descriptor);
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe napi_value InvokeJSMethodNoContext(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.NoContext, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Method!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe napi_value InvokeJSGetterNoContext(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.NoContext, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Getter!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static napi_value InvokeJSSetterNoContext(napi_env env, napi_callback_info callbackInfo)
+    {
+        return InvokeCallback<JSPropertyDescriptor>(
+            env, callbackInfo, JSValueScopeType.NoContext, (propertyDescriptor) => new(
+                propertyDescriptor.Name,
+                propertyDescriptor.Setter!,
+                propertyDescriptor.Data,
+                propertyDescriptor.ModuleContext));
+    }
+
+    private static unsafe napi_value InvokeCallback<TDescriptor>(
+        napi_env env,
+        napi_callback_info callbackInfo,
+        JSValueScopeType scopeType,
+        Func<TDescriptor, JSCallbackDescriptor> getCallbackDescriptor)
+    {
+        using var scope = new JSValueScope(scopeType, env, runtime: default);
+        try
+        {
+            JSCallbackArgs.GetDataAndLength(scope, callbackInfo, out object? data, out int length);
+            Span<napi_value> args = stackalloc napi_value[length];
+            JSCallbackDescriptor descriptor = getCallbackDescriptor((TDescriptor)data!);
+            scope.ModuleContext = descriptor.ModuleContext;
+            return (napi_value)descriptor.Callback(
+                new JSCallbackArgs(scope, callbackInfo, args, descriptor.Data));
+        }
+        catch (Exception ex)
+        {
+            JSError.ThrowError(ex);
+            return napi_value.Null;
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static unsafe void FinalizeGCHandle(napi_env env, nint data, nint hint)
+    {
+        GCHandle handle = GCHandle.FromIntPtr(data);
+        if (hint != default)
+        {
+            GCHandle contextHandle = GCHandle.FromIntPtr(hint);
+            JSRuntimeContext context = (JSRuntimeContext)contextHandle.Target!;
+            context.FreeGCHandle(handle);
+        }
+        else
+        {
+            handle.Free();
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static unsafe void FinalizeGCHandleToDisposable(napi_env env, nint data, nint hint)
+    {
+        GCHandle handle = GCHandle.FromIntPtr(data);
+        try
+        {
+            (handle.Target as IDisposable)?.Dispose();
+        }
+        finally
+        {
+            if (hint != default)
+            {
+                GCHandle contextHandle = GCHandle.FromIntPtr(hint);
+                JSRuntimeContext context = (JSRuntimeContext)contextHandle.Target!;
+                context.FreeGCHandle(handle);
+            }
+            else
+            {
+                handle.Free();
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static unsafe void FinalizeGCHandleToPinnedMemory(napi_env env, nint data, nint hint)
+    {
+        // The GC handle is passed via the hint parameter.
+        // (The data parameter is the pointer to raw memory.)
+        GCHandle handle = GCHandle.FromIntPtr(hint);
+        PinnedMemory pinnedMemory = (PinnedMemory)handle.Target!;
+        try
+        {
+            pinnedMemory.Dispose();
+        }
+        finally
+        {
+            pinnedMemory.RuntimeContext.FreeGCHandle(handle);
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe void CallFinalizeAction(napi_env env, nint data, nint hint)
+    {
+        GCHandle gcHandle = GCHandle.FromIntPtr(data);
+        GCHandle contextHandle = GCHandle.FromIntPtr(hint);
+        JSRuntimeContext context = (JSRuntimeContext)contextHandle.Target!;
+        try
+        {
+            // TODO: [vmoroz] In future we will be not allowed to run JS in finalizers.
+            // We must remove creation of the scope.
+            using var scope = new JSValueScope(JSValueScopeType.Callback);
+            ((Action)gcHandle.Target!)();
+        }
+        finally
+        {
+            context.FreeGCHandle(gcHandle);
+        }
+    }
+
+    internal abstract class PinnedMemory : IDisposable
+    {
+        private bool _disposed = false;
+        private MemoryHandle _memoryHandle;
+
+        protected PinnedMemory(MemoryHandle memoryHandle, object? owner)
+        {
+            _memoryHandle = memoryHandle;
+            Owner = owner;
+            RuntimeContext = JSRuntimeContext.Current;
+        }
+
+        public abstract int Length { get; }
+
+        public object? Owner { get; private set; }
+
+        public unsafe void* Pointer => _memoryHandle.Pointer;
+
+        public JSRuntimeContext RuntimeContext { get; }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                _memoryHandle.Dispose();
+                Owner = null;
+            }
+        }
+
+    }
+
+    internal sealed class PinnedMemory<T> : PinnedMemory where T : struct
+    {
+        private readonly Memory<T> _memory;
+
+        public PinnedMemory(Memory<T> memory, object? owner) : base(memory.Pin(), owner)
+        {
+            _memory = memory;
+        }
+
+        public override int Length => _memory.Length * Unsafe.SizeOf<T>();
+    }
+
     public static implicit operator JSValue(bool value) => GetBoolean(value);
     public static implicit operator JSValue(sbyte value) => CreateNumber(value);
     public static implicit operator JSValue(byte value) => CreateNumber(value);
@@ -507,6 +1463,22 @@ public readonly struct JSValue : IEquatable<JSValue>
             "Hashing JS values is not supported. Use JSSet or JSMap instead.");
     }
 
+    public unsafe void AddGCHandleFinalizer(nint finalizeData)
+    {
+        if (finalizeData != default)
+        {
+            JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+            runtime.AddFinalizer(
+                env,
+                handle,
+                finalizeData,
+                new napi_finalize(s_finalizeGCHandle),
+                //TODO: (vmoroz) improve it
+                Scope.RuntimeContextHandle,
+                out _).ThrowIfFailed();
+        }
+    }
+
     private JSRuntime GetRuntime(out napi_env env)
     {
         JSValueScope scope = _scope ?? throw new ArgumentNullException(nameof(scope));
@@ -517,6 +1489,9 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
+        => GetRuntime(out env, out handle, out _);
+
+    private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
     {
         if (_scope is JSValueScope scope)
         {
@@ -524,16 +1499,17 @@ public readonly struct JSValue : IEquatable<JSValue>
             scope.ThrowIfInvalidThreadAccess();
             env = scope.UncheckedEnvironmentHandle;
             handle = _handle;
-            return scope.Runtime;
+            runtime = scope.Runtime;
         }
         else
         {
             scope = Current;
             env = scope.UncheckedEnvironmentHandle;
-            JSRuntime runtime = scope.Runtime;
+            runtime = scope.Runtime;
             runtime.GetUndefined(env, out handle).ThrowIfFailed();
-            return runtime;
         }
+
+        return runtime;
     }
 
     private static JSRuntime GetCurrentRuntime(out napi_env env)
@@ -542,4 +1518,64 @@ public readonly struct JSValue : IEquatable<JSValue>
         env = scope.UncheckedEnvironmentHandle;
         return scope.Runtime;
     }
+
+    private static unsafe nint[] ToUnmanagedPropertyDescriptors(
+        string name,
+        IReadOnlyCollection<JSPropertyDescriptor> descriptors,
+        UseUnmanagedDescriptors action)
+    {
+        napi_callback methodCallback;
+        napi_callback getterCallback;
+        napi_callback setterCallback;
+        if (JSValueScope.Current?.ScopeType == JSValueScopeType.NoContext)
+        {
+            // The NativeHost and ManagedHost set up callbacks without a current module context.
+            methodCallback = new napi_callback(s_invokeJSMethodNC);
+            getterCallback = new napi_callback(s_invokeJSGetterNC);
+            setterCallback = new napi_callback(s_invokeJSSetterNC);
+        }
+        else
+        {
+            methodCallback = new napi_callback(s_invokeJSMethod);
+            getterCallback = new napi_callback(s_invokeJSGetter);
+            setterCallback = new napi_callback(s_invokeJSSetter);
+        }
+
+        nint[] handlesToFinalize = new nint[descriptors.Count];
+        int count = descriptors.Count;
+        Span<napi_property_descriptor> descriptorsPtr = stackalloc napi_property_descriptor[count];
+        int i = 0;
+        foreach (JSPropertyDescriptor descriptor in descriptors)
+        {
+            ref napi_property_descriptor descriptorPtr = ref descriptorsPtr[i];
+            descriptorPtr.name = (napi_value)(descriptor.NameValue ?? (JSValue)descriptor.Name!);
+            descriptorPtr.utf8name = default;
+            descriptorPtr.method = descriptor.Method == null ? default : methodCallback;
+            descriptorPtr.getter = descriptor.Getter == null ? default : getterCallback;
+            descriptorPtr.setter = descriptor.Setter == null ? default : setterCallback;
+            descriptorPtr.value = (napi_value)descriptor.Value;
+            descriptorPtr.attributes = (napi_property_attributes)descriptor.Attributes;
+            if (descriptor.Data != null ||
+                descriptor.Method != null ||
+                descriptor.Getter != null ||
+                descriptor.Setter != null)
+            {
+                handlesToFinalize[i] = descriptorPtr.data = (nint)(
+                    JSRuntimeContext.Current?.AllocGCHandle(descriptor) ?? GCHandle.Alloc(descriptor));
+            }
+            else
+            {
+                handlesToFinalize[i] = descriptorPtr.data = default;
+            }
+            i++;
+        }
+        action(name, descriptorsPtr);
+        return handlesToFinalize;
+    }
+
+    private unsafe delegate void UseUnmanagedDescriptors(
+        string name, ReadOnlySpan<napi_property_descriptor> descriptors);
+
+    private static napi_value GetUndefined(JSRuntime runtime, napi_env env)
+        => runtime.GetUndefined(env, out napi_value result).ThrowIfFailed(result);
 }
