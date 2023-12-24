@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using static Microsoft.JavaScript.NodeApi.JSNativeApi;
 using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
@@ -70,10 +69,10 @@ public struct JSError
         JSErrorInfo errorInfo = JSErrorInfo.GetLastErrorInfo();
 
         // A pending JS exception takes precedence over any internal error status.
-        if (IsExceptionPending())
+        if (JSValue.IsExceptionPending())
         {
             _message = null;
-            _errorRef = CreateErrorReference(GetAndClearLastException());
+            _errorRef = CreateErrorReference(JSValue.GetAndClearLastException());
             return;
         }
 
@@ -207,7 +206,7 @@ public struct JSError
 
         using var scope = new JSValueScope(JSValueScopeType.Handle);
 
-        if (IsExceptionPending())
+        if (JSValue.IsExceptionPending())
             throw new JSException(new JSError());
 
         napi_status status = scope.Runtime.Throw(
@@ -279,6 +278,30 @@ public struct JSError
                 $"Failed to throw JS Error. Status: {status}\n{exception.Message}");
         }
     }
+
+    public static void ThrowError(string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code: null, message);
+
+    public static void ThrowError(string code, string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code, message);
+
+    public static void ThrowTypeError(string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code: null, message);
+
+    public static void ThrowTypeError(string code, string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code, message);
+
+    public static void ThrowRangeError(string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code: null, message);
+
+    public static void ThrowRangeError(string code, string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code, message);
+
+    public static void ThrowSyntaxError(string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code: null, message);
+
+    public static void ThrowSyntaxError(string code, string message)
+        => JSValue.GetCurrentRuntime(out napi_env env).ThrowError(env, code, message);
 
     /// <summary>
     /// Gets a JS error stack trace that also includes a .NET stack trace,
@@ -365,7 +388,7 @@ public struct JSError
     }
 }
 
-public static partial class JSNativeApi
+public static class JSNativeApi
 {
     public static void FatalIfFailed([DoesNotReturnIf(true)] this napi_status status,
                                      string? message = null,

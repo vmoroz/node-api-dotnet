@@ -51,6 +51,7 @@ public abstract class Benchmarks
         "libnode" + GetSharedLibraryExtension());
 
     private napi_env _env;
+    private JSValue _jsString;
     private JSValue.Checked _jsFunction;
     private JSValue.Checked _jsFunctionWithArgs;
     private JSValue.Checked _jsFunctionWithCallback;
@@ -97,11 +98,14 @@ public abstract class Benchmarks
 
         _jsFunction = JSNativeApi.RunScript("function jsFunction() { }; jsFunction");
         _jsFunctionWithArgs = JSNativeApi.RunScript(
+        _jsString = JSValue.RunScript("'Hello Node-API .Net!'");
+        _jsFunction = (JSFunction)JSValue.RunScript("function jsFunction() { }; jsFunction");
+        _jsFunctionWithArgs = (JSFunction)JSValue.RunScript(
             "function jsFunctionWithArgs(a, b, c) { }; jsFunctionWithArgs");
-        _jsFunctionWithCallback = JSNativeApi.RunScript(
+        _jsFunctionWithCallback = (JSFunction)JSValue.RunScript(
             "function jsFunctionWithCallback(cb, ...args) { cb(...args); }; " +
             "jsFunctionWithCallback");
-        _jsInstance = JSNativeApi.RunScript(
+        _jsInstance = (JSObject)JSValue.RunScript(
             "const jsInstance = { method: (...args) => {} }; jsInstance");
 
         _dotnetFunction = JSValue.CreateFunction(
@@ -125,15 +129,15 @@ public abstract class Benchmarks
             (DotnetClass x, JSValue.Checked value) => x.Property = (string)(JSValue)value);
         classBuilder.AddMethod("method", (x) => (args) => DotnetClass.Method());
         _dotnetClass = classBuilder.DefineClass(JSValue.Undefined);
-        _dotnetInstance = JSNativeApi.CallAsConstructor((JSValue)_dotnetClass);
+        _dotnetInstance = (JSObject)((JSValue)_dotnetClass).CallAsConstructor();
 
-        _jsFunctionCreateInstance = JSNativeApi.RunScript(
+        _jsFunctionCreateInstance = (JSFunction)JSValue.RunScript(
             "function jsFunctionCreateInstance(Class) { new Class() }; " +
             "jsFunctionCreateInstance");
-        _jsFunctionCallMethod = JSNativeApi.RunScript(
+        _jsFunctionCallMethod = (JSFunction)JSValue.RunScript(
             "function jsFunctionCallMethod(instance) { instance.method(); }; " +
             "jsFunctionCallMethod");
-        _jsFunctionCallMethodWithArgs = JSNativeApi.RunScript(
+        _jsFunctionCallMethodWithArgs = (JSFunction)JSValue.RunScript(
             "function jsFunctionCallMethodWithArgs(instance, ...args) " +
             "{ instance.method(...args); }; " +
             "jsFunctionCallMethodWithArgs");
@@ -144,6 +148,18 @@ public abstract class Benchmarks
     private static JSValueScope NewJSScope() => new(JSValueScopeType.Callback);
 
     // Benchmarks in the base class run in both CLR and AOT environments.
+
+    [Benchmark]
+    public void JSValueToString()
+    {
+        _jsString.GetValueStringUtf16();
+    }
+
+    [Benchmark]
+    public void JSValueToStringAsCharArray()
+    {
+        new string(_jsString.GetValueStringUtf16AsCharArray());
+    }
 
     [Benchmark]
     public void CallJSFunction()
@@ -230,13 +246,13 @@ public abstract class Benchmarks
             JSObject hostModule = new();
             _ = new ManagedHost(hostModule);
             _jsHost = (JSValue)hostModule;
-            _jsFunctionCallMethodDynamic = JSNativeApi.RunScript(
+            _jsFunctionCallMethodDynamic = (JSFunction)JSValue.RunScript(
                 "function jsFunctionCallMethodDynamic(dotnet) " +
                 "{ dotnet.System.Object.ReferenceEquals(null, null); }; " +
                 "jsFunctionCallMethodDynamic");
 
             // Implement IFormatProvider in JS and pass it to a .NET method.
-            _jsFunctionCallMethodDynamicInterface = JSNativeApi.RunScript(
+            _jsFunctionCallMethodDynamicInterface = (JSFunction)JSValue.RunScript(
                 "function jsFunctionCallMethodDynamicInterface(dotnet)  {" +
                 "    const formatProvider = { GetFormat: (type) => null };" +
                 "    dotnet.System.String.Format(formatProvider, '', null, null);" +

@@ -90,7 +90,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
         }
         else
         {
-            classObject = JSNativeApi.DefineClass(
+            classObject = JSValue.DefineClass(
                 ClassName,
                 new JSCallbackDescriptor(
                     ClassName,
@@ -184,7 +184,7 @@ public class JSClassBuilder<T> : JSPropertyDescriptorList<JSClassBuilder<T>, T> 
 
         AddTypeToString();
 
-        JSValue obj = JSNativeApi.DefineClass(
+        JSValue obj = JSValue.DefineClass(
             ClassName,
             new JSCallbackDescriptor(ClassName, (args) =>
             {
