@@ -10,7 +10,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.JavaScript.NodeApi.Interop;
 using Microsoft.JavaScript.NodeApi.Runtime;
-using static Microsoft.JavaScript.NodeApi.JSValueScope;
 using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
@@ -42,7 +41,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
     /// </remarks>
-    public JSValue(napi_value handle) : this(handle, Current) { }
+    public JSValue(napi_value handle) : this(handle, JSValueScope.Current) { }
 
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
@@ -74,7 +73,7 @@ public readonly struct JSValue : IEquatable<JSValue>
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return Current.GetUndefinedHandle();
+                return JSValueScope.Current.GetUndefinedHandle();
             }
 
             // Ensure the scope is valid and on the current thread (environment).
@@ -87,7 +86,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     public static implicit operator JSValue(napi_value handle) => new(handle);
-    public static implicit operator JSValue?(napi_value handle) => handle.Handle != default ? new(handle) : default;
+    public static implicit operator JSValue?(napi_value handle) => !handle.IsNull ? new(handle) : default;
     public static explicit operator napi_value(JSValue value) => value.Handle;
     public static explicit operator napi_value(JSValue? value) => value?.Handle ?? default;
 
@@ -687,26 +686,72 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     public JSValue CallMethod(JSValue methodName)
-        => GetProperty(methodName).Call(this);
+        => GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+            .GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed(runtime)
+            .CallFunction(env, handle, method, [], out napi_value result)
+            .ThrowIfFailed(result);
 
     public JSValue CallMethod(JSValue methodName, JSValue arg0)
-        => GetProperty(methodName).Call(this, arg0);
+        => GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+            .GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed(runtime)
+            .CallFunction(env, handle, method, [arg0.GetHandle(scope)], out napi_value result)
+            .ThrowIfFailed(result);
 
-    public JSValue CallMethod(
-        JSValue methodName, JSValue arg0, JSValue arg1)
-        => GetProperty(methodName).Call(this, arg0, arg1);
+    public JSValue CallMethod(JSValue methodName, JSValue arg0, JSValue arg1)
+        => GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+            .GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed(runtime)
+            .CallFunction(
+                env,
+                handle,
+                method,
+                [arg0.GetHandle(scope), arg1.GetHandle(scope)],
+                out napi_value result)
+            .ThrowIfFailed(result);
 
     public JSValue CallMethod(JSValue methodName, JSValue arg0, JSValue arg1, JSValue arg2)
-        => GetProperty(methodName).Call(this, arg0, arg1, arg2);
+        => GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+            .GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed(runtime)
+            .CallFunction(
+                env,
+                handle,
+                method,
+                [arg0.GetHandle(scope), arg1.GetHandle(scope), arg2.GetHandle(scope)],
+                out napi_value result)
+            .ThrowIfFailed(result);
 
     public JSValue CallMethod(JSValue methodName, params JSValue[] args)
-        => GetProperty(methodName).Call(this, args);
+        => CallMethod(methodName, new ReadOnlySpan<JSValue>(args));
 
     public JSValue CallMethod(JSValue methodName, ReadOnlySpan<JSValue> args)
-        => GetProperty(methodName).Call(this, args);
+    {
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
+        runtime.GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed();
+        Span<napi_value> napiArgs = stackalloc napi_value[args.Length];
+        for (int i = 0; i < args.Length; ++i)
+        {
+            napiArgs[i] = args[i].GetHandle(scope);
+        }
+        return runtime.CallFunction(env, handle, method, napiArgs, out napi_value result)
+            .ThrowIfFailed(result);
+    }
 
     public JSValue CallMethod(JSValue methodName, ReadOnlySpan<napi_value> args)
-        => GetProperty(methodName).Call(Handle, args);
+        => GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+            .GetProperty(env, handle, methodName.GetHandle(scope), out napi_value method)
+            .ThrowIfFailed(runtime)
+            .CallFunction(env, handle, method, args, out napi_value result)
+            .ThrowIfFailed(result);
 
     public bool InstanceOf(JSValue constructor)
         => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
@@ -730,7 +775,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         GCHandle descriptorHandle = JSRuntimeContext.Current.AllocGCHandle(constructorDescriptor);
         JSValue? func = null;
         napi_callback callback = new(
-            Current?.ScopeType == JSValueScopeType.NoContext
+            JSValueScope.Current?.ScopeType == JSValueScopeType.NoContext
             ? s_invokeJSCallbackNC : s_invokeJSCallback);
 
         nint[] handles = ToUnmanagedPropertyDescriptors(
@@ -1085,7 +1130,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     //TODO: (vmoroz) Move instance data to somewhere else. It must be not in the public API
     internal static unsafe void SetInstanceData(napi_env env, object? data)
     {
-        JSRuntime runtime = CurrentRuntime;
+        JSRuntime runtime = JSValueScope.CurrentRuntime;
         runtime.GetInstanceData(env, out nint handlePtr).ThrowIfFailed();
         if (handlePtr != default)
         {
@@ -1107,7 +1152,7 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     internal static object? GetInstanceData(napi_env env)
     {
-        CurrentRuntime.GetInstanceData(env, out nint data).ThrowIfFailed();
+        JSValueScope.CurrentRuntime.GetInstanceData(env, out nint data).ThrowIfFailed();
         return (data != default) ? GCHandle.FromIntPtr(data).Target : null;
     }
 
@@ -1533,7 +1578,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         }
         else
         {
-            scope = Current;
+            scope = JSValueScope.Current;
             env = scope.UncheckedEnvironmentHandle;
             runtime = scope.Runtime;
             runtime.GetUndefined(env, out handle).ThrowIfFailed();
@@ -1554,7 +1599,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         }
         else
         {
-            scope = Current;
+            scope = JSValueScope.Current;
             env = scope.UncheckedEnvironmentHandle;
             handle = scope.GetUndefinedHandle();
         }
@@ -1562,9 +1607,31 @@ public readonly struct JSValue : IEquatable<JSValue>
         return scope.Runtime;
     }
 
+    private JSRuntime GetRuntime(
+        out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
+    {
+        if (_scope != null)
+        {
+            scope = _scope;
+            scope.ThrowIfDisposed();
+            scope.ThrowIfInvalidThreadAccess();
+            env = scope.UncheckedEnvironmentHandle;
+            handle = _handle;
+        }
+        else
+        {
+            scope = JSValueScope.Current;
+            env = scope.UncheckedEnvironmentHandle;
+            handle = scope.GetUndefinedHandle();
+        }
+
+        runtime = scope.Runtime;
+        return runtime;
+    }
+
     internal static JSRuntime GetCurrentRuntime(out napi_env env)
     {
-        JSValueScope scope = Current;
+        JSValueScope scope = JSValueScope.Current;
         env = scope.UncheckedEnvironmentHandle;
         return scope.Runtime;
     }
