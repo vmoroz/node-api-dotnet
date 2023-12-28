@@ -74,8 +74,7 @@ public readonly struct JSValue : IEquatable<JSValue>
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return GetCurrentRuntime(out napi_env env)
-                    .GetUndefined(env, out napi_value result).ThrowIfFailed(result);
+                return Current.GetUndefinedHandle();
             }
 
             // Ensure the scope is valid and on the current thread (environment).
@@ -478,28 +477,32 @@ public readonly struct JSValue : IEquatable<JSValue>
         .GetPropertyNames(env, handle, out napi_value result).ThrowIfFailed(result);
 
     public void SetProperty(JSValue key, JSValue value)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .SetProperty(env, handle, key.Handle, value.Handle).ThrowIfFailed();
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .SetProperty(env, handle, key.GetHandle(scope), value.GetHandle(scope))
+            .ThrowIfFailed();
 
     public bool HasProperty(JSValue key)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .HasProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .HasProperty(env, handle, key.GetHandle(scope), out bool result).ThrowIfFailed(result);
 
     public JSValue GetProperty(JSValue key)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .GetProperty(env, handle, key.Handle, out napi_value result).ThrowIfFailed(result);
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .GetProperty(env, handle, key.GetHandle(scope), out napi_value result)
+            .ThrowIfFailed(result);
 
     public bool DeleteProperty(JSValue key)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .DeleteProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .DeleteProperty(env, handle, key.GetHandle(scope), out bool result)
+            .ThrowIfFailed(result);
 
     public bool HasOwnProperty(JSValue key)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .HasOwnProperty(env, handle, key.Handle, out bool result).ThrowIfFailed(result);
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .HasOwnProperty(env, handle, key.GetHandle(scope), out bool result)
+            .ThrowIfFailed(result);
 
     public void SetElement(int index, JSValue value)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .SetElement(env, handle, (uint)index, value.Handle).ThrowIfFailed();
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .SetElement(env, handle, (uint)index, value.GetHandle(scope)).ThrowIfFailed();
 
     public bool HasElement(int index)
         => GetRuntime(out napi_env env, out napi_value handle)
@@ -548,8 +551,10 @@ public readonly struct JSValue : IEquatable<JSValue>
         .GetArrayLength(env, handle, out int result).ThrowIfFailed(result);
 
     // Internal because JSValue structs all implement IEquatable<JSValue>, which calls this method.
-    internal bool StrictEquals(JSValue other) => GetRuntime(out napi_env env, out napi_value handle)
-        .StrictEquals(env, handle, other.Handle, out bool result).ThrowIfFailed(result);
+    internal bool StrictEquals(JSValue other)
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .StrictEquals(env, handle, other.GetHandle(scope), out bool result)
+            .ThrowIfFailed(result);
 
     public unsafe JSValue Call()
         => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
@@ -561,36 +566,31 @@ public readonly struct JSValue : IEquatable<JSValue>
                 out napi_value result).ThrowIfFailed(result);
 
     public unsafe JSValue Call(JSValue thisArg)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .CallFunction(env, thisArg.Handle, handle, [], out napi_value result)
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .CallFunction(env, thisArg.GetHandle(scope), handle, [], out napi_value result)
             .ThrowIfFailed(result);
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0)
     {
-        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = [arg0.GetHandle(scope)];
+        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1)
     {
-        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle, arg1.Handle };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = [arg0.GetHandle(scope), arg1.GetHandle(scope)];
+        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1, JSValue arg2)
     {
-        Span<napi_value> args = stackalloc napi_value[]
-        {
-            arg0.Handle,
-            arg1.Handle,
-            arg2.Handle
-        };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
-        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = [arg0.GetHandle(scope), arg1.GetHandle(scope), arg2.GetHandle(scope)];
+        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
@@ -599,17 +599,17 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue Call(JSValue thisArg, ReadOnlySpan<JSValue> args)
     {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
         {
-            argv[i] = args[i].Handle;
+            argv[i] = args[i].GetHandle(scope);
         }
 
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
         return runtime.CallFunction(
             env,
-            thisArg.Handle,
+            thisArg.GetHandle(scope),
             handle,
             argv,
             out napi_value result)
@@ -635,29 +635,29 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue CallAsConstructor(JSValue arg0)
     {
-        napi_value argValue0 = arg0.Handle;
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        napi_value argValue0 = arg0.GetHandle(scope);
         Span<napi_value> args = stackalloc napi_value[1] { argValue0 };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1)
     {
-        Span<napi_value> args = stackalloc napi_value[2] { arg0.Handle, arg1.Handle };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = stackalloc napi_value[2] { arg0.GetHandle(scope), arg1.GetHandle(scope) };
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1, JSValue arg2)
     {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
         Span<napi_value> args = stackalloc napi_value[3] {
-            arg0.Handle,
-            arg1.Handle,
-            arg2.Handle
+            arg0.GetHandle(scope),
+            arg1.GetHandle(scope),
+            arg2.GetHandle(scope)
         };
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
@@ -667,14 +667,14 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue CallAsConstructor(ReadOnlySpan<JSValue> args)
     {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
         {
-            argv[i] = args[i].Handle;
+            argv[i] = args[i].GetHandle(scope);
         }
 
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
         return runtime.NewInstance(env, handle, argv, out napi_value result)
             .ThrowIfFailed(result);
     }
@@ -709,8 +709,8 @@ public readonly struct JSValue : IEquatable<JSValue>
         => GetProperty(methodName).Call(Handle, args);
 
     public bool InstanceOf(JSValue constructor)
-        => GetRuntime(out napi_env env, out napi_value handle)
-            .InstanceOf(env, handle, constructor.Handle, out bool result)
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+            .InstanceOf(env, handle, constructor.GetHandle(scope), out bool result)
             .ThrowIfFailed(result);
 
     public static unsafe JSValue DefineClass(
@@ -1519,7 +1519,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
-        => GetRuntime(out env, out handle, out _);
+        => GetRuntime(out env, out handle, out JSRuntime _);
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
     {
@@ -1540,6 +1540,26 @@ public readonly struct JSValue : IEquatable<JSValue>
         }
 
         return runtime;
+    }
+
+    private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
+    {
+        if (_scope != null)
+        {
+            scope = _scope;
+            scope.ThrowIfDisposed();
+            scope.ThrowIfInvalidThreadAccess();
+            env = scope.UncheckedEnvironmentHandle;
+            handle = _handle;
+        }
+        else
+        {
+            scope = Current;
+            env = scope.UncheckedEnvironmentHandle;
+            handle = scope.GetUndefinedHandle();
+        }
+
+        return scope.Runtime;
     }
 
     internal static JSRuntime GetCurrentRuntime(out napi_env env)
@@ -1608,4 +1628,16 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     private static napi_value GetUndefined(JSRuntime runtime, napi_env env)
         => runtime.GetUndefined(env, out napi_value result).ThrowIfFailed(result);
+
+    private napi_value GetHandle(JSValueScope scope)
+    {
+        if (scope == _scope)
+        {
+            return _handle;
+        }
+        else
+        {
+            return Handle;
+        }
+    }
 }

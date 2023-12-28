@@ -426,4 +426,12 @@ public sealed class JSValueScope : IDisposable
             throw new JSInvalidThreadAccessException(currentScope: s_currentScope, targetScope: this);
         }
     }
+
+    private napi_value _undefinedHandle;
+
+    internal napi_value GetUndefinedHandle()
+        => _undefinedHandle.IsNull
+        ? _undefinedHandle = Runtime.GetUndefined(_env, out napi_value handle).ThrowIfFailed(handle)
+        : _undefinedHandle;
+
 }
