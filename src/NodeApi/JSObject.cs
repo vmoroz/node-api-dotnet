@@ -34,7 +34,7 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
         _value.DefineProperties(descriptors);
     }
 
-    public void DefineProperties(IReadOnlyCollection<JSPropertyDescriptor> descriptors)
+    public void DefineProperties(ReadOnlySpan<JSPropertyDescriptor> descriptors)
     {
         _value.DefineProperties(descriptors);
     }
