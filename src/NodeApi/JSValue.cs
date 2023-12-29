@@ -531,10 +531,10 @@ public readonly struct JSValue : IEquatable<JSValue>
             .ThrowIfFailed(result);
 
     public unsafe JSValue Call()
-        => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
+        => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
             .CallFunction(
                 env,
-                GetUndefined(runtime, env),
+                scope.GetUndefinedHandle(),
                 handle,
                 new ReadOnlySpan<napi_value>(),
                 out napi_value result).ThrowIfFailed(result);
@@ -1577,12 +1577,12 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
-    public static bool operator ==(JSValue a, JSValue b) => a.StrictEquals(b);
+    public static bool operator ==(JSValue left, JSValue right) => left.StrictEquals(right);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
     /// </summary>
-    public static bool operator !=(JSValue a, JSValue b) => !a.StrictEquals(b);
+    public static bool operator !=(JSValue left, JSValue right) => !left.StrictEquals(right);
 
     /// <summary>
     /// Compares two JS values using JS "strict" equality.
@@ -1624,48 +1624,13 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
-        => GetRuntime(out env, out handle, out JSRuntime _);
+        => GetRuntime(out env, out handle, out _, out _);
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
-    {
-        if (_scope is JSValueScope scope)
-        {
-            scope.ThrowIfDisposed();
-            scope.ThrowIfInvalidThreadAccess();
-            env = scope.UncheckedEnvironmentHandle;
-            handle = _handle;
-            runtime = scope.Runtime;
-        }
-        else
-        {
-            scope = JSValueScope.Current;
-            env = scope.UncheckedEnvironmentHandle;
-            runtime = scope.Runtime;
-            runtime.GetUndefined(env, out handle).ThrowIfFailed();
-        }
-
-        return runtime;
-    }
+        => GetRuntime(out env, out handle, out _, out runtime);
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
-    {
-        if (_scope != null)
-        {
-            scope = _scope;
-            scope.ThrowIfDisposed();
-            scope.ThrowIfInvalidThreadAccess();
-            env = scope.UncheckedEnvironmentHandle;
-            handle = _handle;
-        }
-        else
-        {
-            scope = JSValueScope.Current;
-            env = scope.UncheckedEnvironmentHandle;
-            handle = scope.GetUndefinedHandle();
-        }
-
-        return scope.Runtime;
-    }
+        => GetRuntime(out env, out handle, out scope, out _);
 
     private JSRuntime GetRuntime(
         out napi_env env, out napi_value handle, out JSValueScope scope, out JSRuntime runtime)
@@ -1742,12 +1707,6 @@ public readonly struct JSValue : IEquatable<JSValue>
             }
         }
     }
-
-    private unsafe delegate void UseUnmanagedDescriptors(
-        string name, ReadOnlySpan<napi_property_descriptor> descriptors);
-
-    private static napi_value GetUndefined(JSRuntime runtime, napi_env env)
-        => runtime.GetUndefined(env, out napi_value result).ThrowIfFailed(result);
 
     private napi_value GetHandle(JSValueScope scope)
     {

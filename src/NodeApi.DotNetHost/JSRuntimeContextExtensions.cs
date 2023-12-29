@@ -51,6 +51,6 @@ public static class JSRuntimeContextExtensions
         string? property)
     {
         JSValueScope scope = nodejs;
-        return scope.RuntimeContext.Import<T>(module, property);
+        return scope.RuntimeContext!.Import<T>(module, property);
     }
 }
