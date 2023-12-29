@@ -135,7 +135,7 @@ public sealed class JSValueScope : IDisposable
     public bool IsDisposed { get; private set; }
 
     public JSRuntime Runtime { get; }
-    public JSRuntimeContext RuntimeContext { get; }
+    public JSRuntimeContext? RuntimeContext { get; }
     internal nint RuntimeContextHandle { get; }
 
     internal static JSRuntime CurrentRuntime => Current.Runtime;
@@ -326,7 +326,7 @@ public sealed class JSValueScope : IDisposable
             if (scopeType == JSValueScopeType.NoContext)
             {
                 // NoContext scopes do not have a runtime context.
-                RuntimeContext = null!;
+                RuntimeContext = null;
                 RuntimeContextHandle = default;
             }
             else if (_parentScope?.RuntimeContext != null)
@@ -346,7 +346,7 @@ public sealed class JSValueScope : IDisposable
             {
                 _previousSyncContext = SynchronizationContext.Current;
                 SynchronizationContext.SetSynchronizationContext(
-                    RuntimeContext.SynchronizationContext);
+                    RuntimeContext!.SynchronizationContext);
             }
         }
         catch (Exception)
@@ -363,7 +363,7 @@ public sealed class JSValueScope : IDisposable
 
         if (ScopeType != JSValueScopeType.NoContext)
         {
-            napi_env env = RuntimeContext.EnvironmentHandle;
+            napi_env env = RuntimeContext!.EnvironmentHandle;
 
             switch (ScopeType)
             {
@@ -434,4 +434,9 @@ public sealed class JSValueScope : IDisposable
         ? _undefinedHandle = Runtime.GetUndefined(_env, out napi_value handle).ThrowIfFailed(handle)
         : _undefinedHandle;
 
+    internal JSRuntime GetRuntime(out napi_env env)
+    {
+        env = _env;
+        return Runtime;
+    }
 }

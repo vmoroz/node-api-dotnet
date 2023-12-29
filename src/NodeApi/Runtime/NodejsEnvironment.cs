@@ -48,7 +48,8 @@ public sealed class NodejsEnvironment : IDisposable
 
             // The new scope instance saves itself as the thread-local JSValueScope.Current.
             scope = new JSValueScope(JSValueScopeType.Root, env, platform.Runtime);
-            syncContext = scope.RuntimeContext.SynchronizationContext;
+            syncContext = scope.RuntimeContext?.SynchronizationContext
+                ?? throw new InvalidOperationException("No current runtime context");
 
             // The require() function is available as a global in this context.
             scope.RuntimeContext.Require = JSValue.Global["require"];
@@ -279,7 +280,7 @@ public sealed class NodejsEnvironment : IDisposable
     /// <exception cref="InvalidOperationException">The <see cref="Require"/> function was
     /// not initialized.</exception>
     public JSValue Import(string? module, string? property = null)
-        => _scope.RuntimeContext.Import(module, property);
+        => _scope.RuntimeContext!.Import(module, property);
 
     /// <summary>
     /// Runs garbage collection in the JS environment.

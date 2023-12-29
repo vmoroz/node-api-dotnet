@@ -133,7 +133,8 @@ public sealed class JSRuntimeContext : IDisposable
     /// </summary>
     /// <exception cref="InvalidOperationException">No runtime context was set for the current
     /// thread.</exception>
-    public static JSRuntimeContext Current => JSValueScope.Current.RuntimeContext;
+    public static JSRuntimeContext Current => JSValueScope.Current.RuntimeContext
+        ?? throw new InvalidOperationException("No current runtime context");
 
     public JSRuntime Runtime { get; }
 
