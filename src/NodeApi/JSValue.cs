@@ -86,7 +86,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     public static implicit operator JSValue(napi_value handle) => new(handle);
-    public static implicit operator JSValue?(napi_value handle) => !handle.IsNull ? new(handle) : default;
+    public static implicit operator JSValue?(napi_value handle)
+        => !handle.IsNull ? new(handle) : default;
     public static explicit operator napi_value(JSValue value) => value.Handle;
     public static explicit operator napi_value(JSValue? value) => value?.Handle ?? default;
 
@@ -571,25 +572,36 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
         Span<napi_value> args = [arg0.GetHandle(scope)];
-        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
+        return runtime.CallFunction(
+            env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
         Span<napi_value> args = [arg0.GetHandle(scope), arg1.GetHandle(scope)];
-        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
+        return runtime.CallFunction(
+            env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1, JSValue arg2)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
-        Span<napi_value> args = [arg0.GetHandle(scope), arg1.GetHandle(scope), arg2.GetHandle(scope)];
-        return runtime.CallFunction(env, thisArg.GetHandle(scope), handle, args, out napi_value result)
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args =
+        [
+            arg0.GetHandle(scope),
+            arg1.GetHandle(scope),
+            arg2.GetHandle(scope)
+        ];
+        return runtime.CallFunction(
+            env, thisArg.GetHandle(scope), handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
@@ -598,7 +610,8 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue Call(JSValue thisArg, ReadOnlySpan<JSValue> args)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
@@ -634,29 +647,32 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue CallAsConstructor(JSValue arg0)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
         napi_value argValue0 = arg0.GetHandle(scope);
-        Span<napi_value> args = stackalloc napi_value[1] { argValue0 };
+        Span<napi_value> args = [argValue0];
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
-        Span<napi_value> args = stackalloc napi_value[2] { arg0.GetHandle(scope), arg1.GetHandle(scope) };
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = [arg0.GetHandle(scope), arg1.GetHandle(scope)];
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
 
     public unsafe JSValue CallAsConstructor(JSValue arg0, JSValue arg1, JSValue arg2)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
-        Span<napi_value> args = stackalloc napi_value[3] {
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
+        Span<napi_value> args = [
             arg0.GetHandle(scope),
             arg1.GetHandle(scope),
             arg2.GetHandle(scope)
-        };
+        ];
         return runtime.NewInstance(env, handle, args, out napi_value result)
             .ThrowIfFailed(result);
     }
@@ -666,7 +682,8 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public unsafe JSValue CallAsConstructor(ReadOnlySpan<JSValue> args)
     {
-        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope);
+        JSRuntime runtime = GetRuntime(
+            out napi_env env, out napi_value handle, out JSValueScope scope);
         int argc = args.Length;
         Span<napi_value> argv = stackalloc napi_value[argc];
         for (int i = 0; i < argc; ++i)
@@ -1134,7 +1151,8 @@ public readonly struct JSValue : IEquatable<JSValue>
         runtime.GetInstanceData(env, out nint handlePtr).ThrowIfFailed();
         if (handlePtr != default)
         {
-            // Current napi_set_instance_data implementation does not call finalizer when we replace existing instance data.
+            // Current napi_set_instance_data implementation does not call finalizer
+            // when we replace existing instance data.
             // It means that we only remove the GC root, but do not call Dispose.
             GCHandle.FromIntPtr(handlePtr).Free();
         }
@@ -1181,14 +1199,17 @@ public readonly struct JSValue : IEquatable<JSValue>
     internal static readonly napi_callback.Delegate s_invokeJSMethod = InvokeJSMethod;
     internal static readonly napi_callback.Delegate s_invokeJSGetter = InvokeJSGetter;
     internal static readonly napi_callback.Delegate s_invokeJSSetter = InvokeJSSetter;
-    internal static readonly napi_callback.Delegate s_invokeJSCallbackNC = InvokeJSCallbackNoContext;
+    internal static readonly napi_callback.Delegate s_invokeJSCallbackNC
+        = InvokeJSCallbackNoContext;
     internal static readonly napi_callback.Delegate s_invokeJSMethodNC = InvokeJSMethodNoContext;
     internal static readonly napi_callback.Delegate s_invokeJSGetterNC = InvokeJSGetterNoContext;
     internal static readonly napi_callback.Delegate s_invokeJSSetterNC = InvokeJSSetterNoContext;
 
     internal static readonly napi_finalize.Delegate s_finalizeGCHandle = FinalizeGCHandle;
-    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToDisposable = FinalizeGCHandleToDisposable;
-    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToPinnedMemory = FinalizeGCHandleToPinnedMemory;
+    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToDisposable
+        = FinalizeGCHandleToDisposable;
+    internal static readonly napi_finalize.Delegate s_finalizeGCHandleToPinnedMemory
+        = FinalizeGCHandleToPinnedMemory;
     internal static readonly napi_finalize.Delegate s_callFinalizeAction = CallFinalizeAction;
 #else
     internal static readonly unsafe delegate* unmanaged[Cdecl]
@@ -1200,7 +1221,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     internal static readonly unsafe delegate* unmanaged[Cdecl]
         <napi_env, napi_callback_info, napi_value> s_invokeJSSetter = &InvokeJSSetter;
     internal static readonly unsafe delegate* unmanaged[Cdecl]
-        <napi_env, napi_callback_info, napi_value> s_invokeJSCallbackNC = &InvokeJSCallbackNoContext;
+        <napi_env, napi_callback_info, napi_value> s_invokeJSCallbackNC
+        = &InvokeJSCallbackNoContext;
     internal static readonly unsafe delegate* unmanaged[Cdecl]
         <napi_env, napi_callback_info, napi_value> s_invokeJSMethodNC = &InvokeJSMethodNoContext;
     internal static readonly unsafe delegate* unmanaged[Cdecl]
@@ -1213,7 +1235,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     internal static readonly unsafe delegate* unmanaged[Cdecl]
         <napi_env, nint, nint, void> s_finalizeGCHandleToDisposable = &FinalizeGCHandleToDisposable;
     internal static readonly unsafe delegate* unmanaged[Cdecl]
-        <napi_env, nint, nint, void> s_finalizeGCHandleToPinnedMemory = &FinalizeGCHandleToPinnedMemory;
+        <napi_env, nint, nint, void> s_finalizeGCHandleToPinnedMemory
+        = &FinalizeGCHandleToPinnedMemory;
     internal static readonly unsafe delegate* unmanaged[Cdecl]
         <napi_env, nint, nint, void> s_callFinalizeAction = &CallFinalizeAction;
 #endif
@@ -1268,7 +1291,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe napi_value InvokeJSMethodNoContext(napi_env env, napi_callback_info callbackInfo)
+    private static unsafe napi_value InvokeJSMethodNoContext(
+        napi_env env, napi_callback_info callbackInfo)
     {
         return InvokeCallback<JSPropertyDescriptor>(
             env, callbackInfo, JSValueScopeType.NoContext, (propertyDescriptor) => new(
@@ -1279,7 +1303,8 @@ public readonly struct JSValue : IEquatable<JSValue>
     }
 
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe napi_value InvokeJSGetterNoContext(napi_env env, napi_callback_info callbackInfo)
+    private static unsafe napi_value InvokeJSGetterNoContext(
+        napi_env env, napi_callback_info callbackInfo)
     {
         return InvokeCallback<JSPropertyDescriptor>(
             env, callbackInfo, JSValueScopeType.NoContext, (propertyDescriptor) => new(
@@ -1453,22 +1478,36 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static implicit operator JSValue(ulong value) => CreateNumber(value);
     public static implicit operator JSValue(float value) => CreateNumber(value);
     public static implicit operator JSValue(double value) => CreateNumber(value);
-    public static implicit operator JSValue(bool? value) => ValueOrDefault(value, value => GetBoolean(value));
-    public static implicit operator JSValue(sbyte? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(byte? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(short? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(ushort? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(int? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(uint? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(long? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(ulong? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(float? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(double? value) => ValueOrDefault(value, value => CreateNumber(value));
-    public static implicit operator JSValue(string value) => value == null ? default : CreateStringUtf16(value);
-    public static implicit operator JSValue(char[] value) => value == null ? default : CreateStringUtf16(value);
+    public static implicit operator JSValue(bool? value)
+        => ValueOrDefault(value, value => GetBoolean(value));
+    public static implicit operator JSValue(sbyte? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(byte? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(short? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(ushort? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(int? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(uint? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(long? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(ulong? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(float? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(double? value)
+        => ValueOrDefault(value, value => CreateNumber(value));
+    public static implicit operator JSValue(string value)
+        => value == null ? default : CreateStringUtf16(value);
+    public static implicit operator JSValue(char[] value)
+        => value == null ? default : CreateStringUtf16(value);
     public static implicit operator JSValue(Span<char> value) => CreateStringUtf16(value);
     public static implicit operator JSValue(ReadOnlySpan<char> value) => CreateStringUtf16(value);
-    public static implicit operator JSValue(byte[] value) => value == null ? default : CreateStringUtf8(value);
+    public static implicit operator JSValue(byte[] value)
+        => value == null ? default : CreateStringUtf8(value);
     public static implicit operator JSValue(Span<byte> value) => CreateStringUtf8(value);
     public static implicit operator JSValue(ReadOnlySpan<byte> value) => CreateStringUtf8(value);
 
@@ -1483,20 +1522,34 @@ public readonly struct JSValue : IEquatable<JSValue>
     public static explicit operator ulong(JSValue value) => (ulong)value.GetValueInt64();
     public static explicit operator float(JSValue value) => (float)value.GetValueDouble();
     public static explicit operator double(JSValue value) => value.GetValueDouble();
-    public static explicit operator string(JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16();
-    public static explicit operator char[](JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16AsCharArray();
-    public static explicit operator byte[](JSValue value) => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf8();
-    public static explicit operator bool?(JSValue value) => ValueOrDefault(value, value => value.GetValueBool());
-    public static explicit operator sbyte?(JSValue value) => ValueOrDefault(value, value => (sbyte)value.GetValueInt32());
-    public static explicit operator byte?(JSValue value) => ValueOrDefault(value, value => (byte)value.GetValueUInt32());
-    public static explicit operator short?(JSValue value) => ValueOrDefault(value, value => (short)value.GetValueInt32());
-    public static explicit operator ushort?(JSValue value) => ValueOrDefault(value, value => (ushort)value.GetValueUInt32());
-    public static explicit operator int?(JSValue value) => ValueOrDefault(value, value => value.GetValueInt32());
-    public static explicit operator uint?(JSValue value) => ValueOrDefault(value, value => value.GetValueUInt32());
-    public static explicit operator long?(JSValue value) => ValueOrDefault(value, value => value.GetValueInt64());
-    public static explicit operator ulong?(JSValue value) => ValueOrDefault(value, value => (ulong)value.GetValueInt64());
-    public static explicit operator float?(JSValue value) => ValueOrDefault(value, value => (float)value.GetValueDouble());
-    public static explicit operator double?(JSValue value) => ValueOrDefault(value, value => value.GetValueDouble());
+    public static explicit operator string(JSValue value)
+        => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16();
+    public static explicit operator char[](JSValue value)
+        => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf16AsCharArray();
+    public static explicit operator byte[](JSValue value)
+        => value.IsNullOrUndefined() ? null! : value.GetValueStringUtf8();
+    public static explicit operator bool?(JSValue value)
+        => ValueOrDefault(value, value => value.GetValueBool());
+    public static explicit operator sbyte?(JSValue value)
+        => ValueOrDefault(value, value => (sbyte)value.GetValueInt32());
+    public static explicit operator byte?(JSValue value)
+        => ValueOrDefault(value, value => (byte)value.GetValueUInt32());
+    public static explicit operator short?(JSValue value)
+        => ValueOrDefault(value, value => (short)value.GetValueInt32());
+    public static explicit operator ushort?(JSValue value)
+        => ValueOrDefault(value, value => (ushort)value.GetValueUInt32());
+    public static explicit operator int?(JSValue value)
+        => ValueOrDefault(value, value => value.GetValueInt32());
+    public static explicit operator uint?(JSValue value)
+        => ValueOrDefault(value, value => value.GetValueUInt32());
+    public static explicit operator long?(JSValue value)
+        => ValueOrDefault(value, value => value.GetValueInt64());
+    public static explicit operator ulong?(JSValue value)
+        => ValueOrDefault(value, value => (ulong)value.GetValueInt64());
+    public static explicit operator float?(JSValue value)
+        => ValueOrDefault(value, value => (float)value.GetValueDouble());
+    public static explicit operator double?(JSValue value)
+        => ValueOrDefault(value, value => value.GetValueDouble());
 
     private static JSValue ValueOrDefault<T>(T? value, Func<T, JSValue> convert) where T : struct
         => value.HasValue ? convert(value.Value) : default;
@@ -1678,7 +1731,8 @@ public readonly struct JSValue : IEquatable<JSValue>
                 descriptor.Setter != null)
             {
                 handlesToFinalize[i] = descriptorPtr.data = (nint)(
-                    JSRuntimeContext.Current?.AllocGCHandle(descriptor) ?? GCHandle.Alloc(descriptor));
+                    JSRuntimeContext.Current?.AllocGCHandle(descriptor)
+                    ?? GCHandle.Alloc(descriptor));
             }
             else
             {
