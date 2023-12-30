@@ -375,7 +375,30 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public bool IsBigInt() => TypeOf() == JSValueType.BigInt;
 
-    public JSBigInt? AsJSBigInt() => IsBigInt() ? JSBigInt.CreateUnchecked(this) : default;
+//    public JSBigInt? AsJSBigInt() => IsBigInt() ? JSBigInt.CreateUnchecked(this) : default;
+
+    public bool Is<TValue>() where TValue : struct
+#if NET7_0_OR_GREATER
+        , IJSValue<TValue> => TValue.CanBeConvertedFrom(this);
+#else
+        => JSValueStatics<TValue>.CanBeConvertedFrom(this);
+#endif
+
+    public TValue? As<TValue>() where TValue : struct
+#if NET7_0_OR_GREATER
+        , IJSValue<TValue>
+        => TValue.CanBeConvertedFrom(this) ? TValue.CreateUnchecked(this) : default;
+#else
+        => JSValueStatics<TValue>.CanBeConvertedFrom(this)
+            ? JSValueStatics<TValue>.CreateUnchecked(this) : default;
+#endif
+
+    public TValue AsUnchecked<TValue>() where TValue : struct
+#if NET7_0_OR_GREATER
+        , IJSValue<TValue> => TValue.CreateUnchecked(this);
+#else
+        => JSValueStatics<TValue>.CreateUnchecked(this);
+#endif
 
     public double GetValueDouble() => GetRuntime(out napi_env env, out napi_value handle)
         .GetValueDouble(env, handle, out double result).ThrowIfFailed(result);
