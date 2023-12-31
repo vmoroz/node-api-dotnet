@@ -9,6 +9,9 @@ using System.Threading;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSAsyncIterable : IAsyncEnumerable<JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSAsyncIterable>
+#endif
 {
     private readonly JSValue _value;
 
@@ -22,6 +25,12 @@ public readonly partial struct JSAsyncIterable : IAsyncEnumerable<JSValue>, IEqu
     {
         _value = value;
     }
+
+    //TODO: (vmoroz) implement proper check using Symbol.asyncIterator
+    public static bool CanBeConvertedFrom(JSValue value) =>
+        value.TypeOf() == JSValueType.Object;
+
+    public static JSAsyncIterable CreateUnchecked(JSValue value) => new(value);
 
 #pragma warning disable IDE0060 // Unused parameter
     public Enumerator GetAsyncEnumerator(CancellationToken cancellationToken = default)

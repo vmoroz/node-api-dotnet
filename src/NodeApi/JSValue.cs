@@ -1646,7 +1646,7 @@ public readonly struct JSValue : IEquatable<JSValue>
         return scope.Runtime;
     }
 
-    private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
+    internal JSRuntime GetRuntime(out napi_env env, out napi_value handle)
         => GetRuntime(out env, out handle, out _, out _);
 
     private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)

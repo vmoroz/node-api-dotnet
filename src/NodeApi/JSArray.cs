@@ -5,10 +5,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSArray : IList<JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSArray>
+#endif
 {
     private readonly JSValue _value;
 
@@ -44,6 +48,12 @@ public readonly partial struct JSArray : IList<JSValue>, IEquatable<JSValue>
             _value.SetElement(i, array[i]);
         }
     }
+
+    public static bool CanBeConvertedFrom(JSValue value)
+        => value.GetRuntime(out napi_env env, out napi_value handle)
+        .IsArray(env, handle, out bool result).ThrowIfFailed(result);
+
+    public static JSArray CreateUnchecked(JSValue value) => new(value);
 
     /// <inheritdoc/>
     public int Length => _value.GetArrayLength();

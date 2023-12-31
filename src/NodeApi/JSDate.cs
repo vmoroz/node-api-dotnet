@@ -4,10 +4,14 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.JavaScript.NodeApi.Interop;
+using static Microsoft.JavaScript.NodeApi.Runtime.JSRuntime;
 
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly struct JSDate : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSDate>
+#endif
 {
     private readonly JSValue _value;
 
@@ -35,6 +39,12 @@ public readonly struct JSDate : IEquatable<JSValue>
     }
 
     public long DateValue => (long)_value.CallMethod("valueOf");
+
+    public static bool CanBeConvertedFrom(JSValue value)
+        => value.GetRuntime(out napi_env env, out napi_value handle)
+        .IsDate(env, handle, out bool result).ThrowIfFailed(result);
+
+    public static JSDate CreateUnchecked(JSValue value) => new(value);
 
     public static JSDate FromDateTime(DateTime value)
     {

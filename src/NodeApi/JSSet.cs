@@ -10,6 +10,9 @@ using Microsoft.JavaScript.NodeApi.Interop;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSSet>
+#endif
 {
     private readonly JSValue _value;
 
@@ -43,6 +46,11 @@ public readonly partial struct JSSet : ISet<JSValue>, IEquatable<JSValue>
     {
         _value = JSRuntimeContext.Current.Import(null, "Set").CallAsConstructor(iterable);
     }
+
+    // TODO: (vmoroz) Implement using instanceof
+    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+
+    public static JSSet CreateUnchecked(JSValue value) => new(value);
 
     public int Count => (int)_value["size"];
 

@@ -9,6 +9,9 @@ using Microsoft.JavaScript.NodeApi.Interop;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSMap>
+#endif
 {
     private readonly JSValue _value;
 
@@ -39,6 +42,11 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
     {
         _value = JSRuntimeContext.Current.Import(null, "Map").CallAsConstructor(iterable);
     }
+
+    // TODO: (vmoroz) Implement using instanceof
+    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+
+    public static JSMap CreateUnchecked(JSValue value) => new(value);
 
     public int Count => (int)_value["size"];
 

@@ -9,7 +9,11 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.JavaScript.NodeApi;
 
-public readonly struct JSTypedArray<T> : IEquatable<JSValue> where T : struct
+public readonly struct JSTypedArray<T> : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSTypedArray<T>>
+#endif
+    where T : struct
 {
     private readonly JSValue _value;
 
@@ -100,6 +104,12 @@ public readonly struct JSTypedArray<T> : IEquatable<JSValue> where T : struct
                 "Read-only memory cannot be transferred from .NET to JS.");
         }
     }
+
+    //TODO: (vmoroz) Implement correctly
+    public static bool CanBeConvertedFrom(JSValue value)
+        => value.IsObject();
+
+    public static JSTypedArray<T> CreateUnchecked(JSValue value) => new(value);
 
     /// <summary>
     /// Checks if this Memory is already owned by a JS TypedArray value, and if so
