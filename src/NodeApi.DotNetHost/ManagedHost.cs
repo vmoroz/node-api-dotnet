@@ -137,6 +137,9 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
         }
 
         exports.DefineProperties(
+            JSPropertyDescriptor.Accessor("runtimeVersion", ManagedHost.GetRuntimeVersion),
+            JSPropertyDescriptor.Accessor("frameworkMoniker", ManagedHost.GetFrameworkMoniker),
+
             // The require() method loads a .NET assembly that was built to be a Node API module.
             // It uses static binding to the APIs the module specifically exports to JS.
             JSPropertyDescriptor.Function("require", LoadModule),
@@ -164,22 +167,26 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
 
         // Export the System.Runtime and System.Console assemblies by default.
         LoadAssemblyTypes(typeof(object).Assembly);
-        _loadedAssembliesByName.Add("System.Runtime", typeof(object).Assembly);
+        _loadedAssembliesByName.Add(
+            typeof(object).Assembly.GetName().Name!, typeof(object).Assembly);
 
         if (typeof(Console).Assembly != typeof(object).Assembly)
         {
             LoadAssemblyTypes(typeof(Console).Assembly);
-            _loadedAssembliesByName.Add("System.Console", typeof(Console).Assembly);
+            _loadedAssembliesByName.Add(
+                typeof(Console).Assembly.GetName().Name!, typeof(Console).Assembly);
         }
     }
 
     public static bool IsTracingEnabled { get; } =
-        Environment.GetEnvironmentVariable("TRACE_NODE_API_HOST") == "1";
+        Debugger.IsAttached ||
+        Environment.GetEnvironmentVariable("NODE_API_TRACE_HOST") == "1";
 
     public static void Trace(string msg)
     {
         if (IsTracingEnabled)
         {
+            Debug.WriteLine(msg);
             Console.WriteLine(msg);
             Console.Out.Flush();
         }
@@ -208,11 +215,12 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
         Trace($"    .NET Runtime version: {Environment.Version}");
 #endif
 
-        DebugHelper.AttachDebugger("DEBUG_NODE_API_RUNTIME");
+        DebugHelper.AttachDebugger("NODE_API_DEBUG_RUNTIME");
 
         JSRuntime runtime = new NodejsRuntime();
 
-        if (Environment.GetEnvironmentVariable("TRACE_NODE_API_RUNTIME") != null)
+        if (Debugger.IsAttached ||
+            Environment.GetEnvironmentVariable("NODE_API_TRACE_RUNTIME") != null)
         {
             TraceSource trace = new(typeof(JSValue).Namespace!);
             trace.Switch.Level = SourceLevels.All;
@@ -321,6 +329,22 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
         return default;
     }
 
+    public static JSValue GetRuntimeVersion(JSCallbackArgs _)
+    {
+        return Environment.Version.ToString();
+    }
+
+    public static JSValue GetFrameworkMoniker(JSCallbackArgs _)
+    {
+        Version runtimeVersion = Environment.Version;
+
+        // For .NET 4 the minor version may be higher, but net472 is the only TFM supported.
+        string tfm = runtimeVersion.Major == 4 ? "net472" :
+            $"net{runtimeVersion.Major}.{runtimeVersion.Minor}";
+
+        return tfm;
+    }
+
     /// <summary>
     /// Loads a .NET assembly that was built to be a Node API module, using static binding to
     /// the APIs the module specifically exports to JS.
@@ -405,7 +429,7 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
 
         if (exports.IsObject())
         {
-            exportsRef = exports.CreateReference();
+            exportsRef = new JSReference(exports);
             _loadedModules.Add(assemblyFilePath, exportsRef);
         }
 
@@ -550,9 +574,13 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
                 continue;
             }
 
+            // Delay-loading is enabled by default, but can be disabled with this env variable.
+            bool deferMembers = Environment.GetEnvironmentVariable("NODE_API_DELAYLOAD") != "0";
+
             if (!_exportedNamespaces.TryGetValue(namespaceParts[0], out Namespace? parentNamespace))
             {
-                parentNamespace = new Namespace(namespaceParts[0], _typeExporter.TryExportType);
+                parentNamespace = new Namespace(
+                    namespaceParts[0], (type) => _typeExporter.TryExportType(type, deferMembers));
                 _exports.GetValue()!.Value.SetProperty(namespaceParts[0], parentNamespace.Value);
                 _exportedNamespaces.Add(namespaceParts[0], parentNamespace);
             }
@@ -564,7 +592,7 @@ public sealed class ManagedHost : JSEventEmitter, IDisposable
                 {
                     childNamespace = new Namespace(
                         parentNamespace.Name + '.' + namespaceParts[i],
-                        _typeExporter.TryExportType);
+                        (type) => _typeExporter.TryExportType(type, deferMembers));
                     parentNamespace.Namespaces.Add(namespaceParts[i], childNamespace);
                 }
 

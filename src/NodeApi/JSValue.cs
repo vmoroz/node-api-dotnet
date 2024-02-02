@@ -3,6 +3,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -40,7 +41,7 @@ public readonly struct JSValue : IEquatable<JSValue>
     /// WARNING: A JS value handle is a pointer to a location in memory, so an invalid handle here
     /// may cause an attempt to access an invalid memory location.
     /// </remarks>
-    public JSValue(napi_value handle) : this(handle, JSValueScope.Current) { }
+    public JSValue(napi_value handle) : this(handle, Current) { }
 
     /// <summary>
     /// Creates a new instance of <see cref="JSValue" /> from a handle in the specified scope.
@@ -72,7 +73,8 @@ public readonly struct JSValue : IEquatable<JSValue>
             {
                 // If the scope is null, this is an empty (uninitialized) instance.
                 // Implicitly convert to the JS `undefined` value.
-                return JSValueScope.Current.GetUndefinedHandle();
+                return GetCurrentRuntime(out napi_env env)
+                    .GetUndefined(env, out napi_value result).ThrowIfFailed(result);
             }
 
             // Ensure the scope is valid and on the current thread (environment).
@@ -506,6 +508,113 @@ public readonly struct JSValue : IEquatable<JSValue>
     public bool HasOwnProperty(JSValue key)
         => GetRuntime(out napi_env env, out napi_value handle, out JSValueScope scope)
             .HasOwnProperty(env, handle, key.GetHandle(scope), out bool result)
+        }
+    }
+
+    public unsafe void DefineProperties(params JSPropertyDescriptor[] descriptors)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        nint[] descriptorHandles = ToUnmanagedPropertyDescriptors(
+            string.Empty,
+            descriptors,
+            (_, descriptorsPtr) => runtime.DefineProperties(env, handle, descriptorsPtr)
+            .ThrowIfFailed());
+        foreach (nint descriptorHandle in descriptorHandles)
+        {
+            AddGCHandleFinalizer(descriptorHandle);
+        }
+    }
+
+    public bool IsArray() => GetRuntime(out napi_env env, out napi_value handle)
+        .IsArray(env, handle, out bool result).ThrowIfFailed(result);
+
+    public int GetArrayLength() => GetRuntime(out napi_env env, out napi_value handle)
+        .GetArrayLength(env, handle, out int result).ThrowIfFailed(result);
+
+    // Internal because JSValue structs all implement IEquatable<JSValue>, which calls this method.
+    internal bool StrictEquals(JSValue other) => GetRuntime(out napi_env env, out napi_value handle)
+        .StrictEquals(env, handle, other.Handle, out bool result).ThrowIfFailed(result);
+
+    public unsafe JSValue Call()
+        => GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
+            .CallFunction(
+                env,
+                GetUndefined(runtime, env),
+                handle,
+                new ReadOnlySpan<napi_value>(),
+                out napi_value result).ThrowIfFailed(result);
+
+    public unsafe JSValue Call(JSValue thisArg)
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .CallFunction(env, thisArg.Handle, handle, [], out napi_value result)
+            .ThrowIfFailed(result);
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0)
+    {
+        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1)
+    {
+        Span<napi_value> args = stackalloc napi_value[] { arg0.Handle, arg1.Handle };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, JSValue arg0, JSValue arg1, JSValue arg2)
+    {
+        Span<napi_value> args = stackalloc napi_value[]
+        {
+            arg0.Handle,
+            arg1.Handle,
+            arg2.Handle
+        };
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(env, thisArg.Handle, handle, args, out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(JSValue thisArg, params JSValue[] args)
+        => Call(thisArg, new ReadOnlySpan<JSValue>(args));
+
+    public unsafe JSValue Call(JSValue thisArg, ReadOnlySpan<JSValue> args)
+    {
+        int argc = args.Length;
+        Span<napi_value> argv = stackalloc napi_value[argc];
+        for (int i = 0; i < argc; ++i)
+        {
+            argv[i] = args[i].Handle;
+        }
+
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(
+            env,
+            thisArg.Handle,
+            handle,
+            argv,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue Call(napi_value thisArg, ReadOnlySpan<napi_value> args)
+    {
+        JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+        return runtime.CallFunction(
+            env,
+            thisArg,
+            handle,
+            args,
+            out napi_value result)
+            .ThrowIfFailed(result);
+    }
+
+    public unsafe JSValue CallAsConstructor()
+        => GetRuntime(out napi_env env, out napi_value handle)
+            .NewInstance(env, handle, [], out napi_value result)
             .ThrowIfFailed(result);
 
     public void SetElement(int index, JSValue value)
@@ -1742,4 +1851,118 @@ public readonly struct JSValue : IEquatable<JSValue>
             return Handle;
         }
     }
+
+    public unsafe void AddGCHandleFinalizer(nint finalizeData)
+    {
+        if (finalizeData != default)
+        {
+            JSRuntime runtime = GetRuntime(out napi_env env, out napi_value handle);
+            runtime.AddFinalizer(
+                env,
+                handle,
+                finalizeData,
+                new napi_finalize(s_finalizeGCHandle),
+                Scope.RuntimeContextHandle).ThrowIfFailed();
+        }
+    }
+
+    private JSRuntime GetRuntime(out napi_env env)
+    {
+        JSValueScope scope = _scope ?? throw new JSInvalidThreadAccessException(null);
+        scope.ThrowIfDisposed();
+        scope.ThrowIfInvalidThreadAccess();
+        env = scope.UncheckedEnvironmentHandle;
+        return scope.Runtime;
+    }
+
+    private JSRuntime GetRuntime(out napi_env env, out napi_value handle)
+        => GetRuntime(out env, out handle, out _);
+
+    private JSRuntime GetRuntime(out napi_env env, out napi_value handle, out JSRuntime runtime)
+    {
+        if (_scope is JSValueScope scope)
+        {
+            scope.ThrowIfDisposed();
+            scope.ThrowIfInvalidThreadAccess();
+            env = scope.UncheckedEnvironmentHandle;
+            handle = _handle;
+            runtime = scope.Runtime;
+        }
+        else
+        {
+            scope = Current;
+            env = scope.UncheckedEnvironmentHandle;
+            runtime = scope.Runtime;
+            runtime.GetUndefined(env, out handle).ThrowIfFailed();
+        }
+
+        return runtime;
+    }
+
+    internal static JSRuntime GetCurrentRuntime(out napi_env env)
+    {
+        JSValueScope scope = Current;
+        env = scope.UncheckedEnvironmentHandle;
+        return scope.Runtime;
+    }
+
+    private static unsafe nint[] ToUnmanagedPropertyDescriptors(
+        string name,
+        IReadOnlyCollection<JSPropertyDescriptor> descriptors,
+        UseUnmanagedDescriptors action)
+    {
+        napi_callback methodCallback;
+        napi_callback getterCallback;
+        napi_callback setterCallback;
+        if (JSValueScope.Current?.ScopeType == JSValueScopeType.NoContext)
+        {
+            // The NativeHost and ManagedHost set up callbacks without a current module context.
+            methodCallback = new napi_callback(s_invokeJSMethodNC);
+            getterCallback = new napi_callback(s_invokeJSGetterNC);
+            setterCallback = new napi_callback(s_invokeJSSetterNC);
+        }
+        else
+        {
+            methodCallback = new napi_callback(s_invokeJSMethod);
+            getterCallback = new napi_callback(s_invokeJSGetter);
+            setterCallback = new napi_callback(s_invokeJSSetter);
+        }
+
+        nint[] handlesToFinalize = new nint[descriptors.Count];
+        int count = descriptors.Count;
+        Span<napi_property_descriptor> descriptorsPtr = stackalloc napi_property_descriptor[count];
+        int i = 0;
+        foreach (JSPropertyDescriptor descriptor in descriptors)
+        {
+            ref napi_property_descriptor descriptorPtr = ref descriptorsPtr[i];
+            descriptorPtr.name = (napi_value)(descriptor.NameValue ?? (JSValue)descriptor.Name!);
+            descriptorPtr.utf8name = default;
+            descriptorPtr.method = descriptor.Method == null ? default : methodCallback;
+            descriptorPtr.getter = descriptor.Getter == null ? default : getterCallback;
+            descriptorPtr.setter = descriptor.Setter == null ? default : setterCallback;
+            descriptorPtr.value = (napi_value)descriptor.Value;
+            descriptorPtr.attributes = (napi_property_attributes)descriptor.Attributes;
+            if (descriptor.Data != null ||
+                descriptor.Method != null ||
+                descriptor.Getter != null ||
+                descriptor.Setter != null)
+            {
+                handlesToFinalize[i] = descriptorPtr.data = (nint)(
+                    JSRuntimeContext.Current?.AllocGCHandle(descriptor) ?? GCHandle.Alloc(descriptor));
+            }
+            else
+            {
+                handlesToFinalize[i] = descriptorPtr.data = default;
+            }
+            i++;
+        }
+        action(name, descriptorsPtr);
+        return handlesToFinalize;
+    }
+
+    private unsafe delegate void UseUnmanagedDescriptors(
+        string name, ReadOnlySpan<napi_property_descriptor> descriptors);
+
+    private static napi_value GetUndefined(JSRuntime runtime, napi_env env)
+        => runtime.GetUndefined(env, out napi_value result).ThrowIfFailed(result);
 }
