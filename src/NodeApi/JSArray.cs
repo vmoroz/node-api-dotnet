@@ -19,7 +19,7 @@ public readonly partial struct JSArray : IList<JSValue>, IEquatable<JSValue>
     public static implicit operator JSValue(JSArray arr) => arr.AsJSValue();
     public static explicit operator JSArray?(JSValue value) => value.As<JSArray>();
     public static explicit operator JSArray(JSValue value)
-        => value.As<JSArray>() ?? throw new InvalidCastException("JSValue is not BigInt");
+        => value.As<JSArray>() ?? throw new InvalidCastException("JSValue is not an Array");
 
     public static explicit operator JSArray(JSObject obj) => (JSArray)(JSValue)obj;
     public static implicit operator JSObject(JSArray arr) => (JSObject)arr._value;

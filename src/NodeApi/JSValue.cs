@@ -391,8 +391,6 @@ public readonly struct JSValue : IEquatable<JSValue>
 
     public bool IsBigInt() => TypeOf() == JSValueType.BigInt;
 
-//    public JSBigInt? AsJSBigInt() => IsBigInt() ? JSBigInt.CreateUnchecked(this) : default;
-
     public bool Is<TValue>() where TValue : struct
 #if NET7_0_OR_GREATER
         , IJSValue<TValue> => TValue.CanBeConvertedFrom(this);

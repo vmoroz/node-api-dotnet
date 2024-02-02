@@ -22,8 +22,11 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSAbortSignal(JSValue value) => new(value);
-    public static implicit operator JSValue(JSAbortSignal promise) => promise._value;
+    public static implicit operator JSValue(JSAbortSignal value) => value.AsJSValue();
+    public static explicit operator JSAbortSignal?(JSValue value) => value.As<JSAbortSignal>();
+    public static explicit operator JSAbortSignal(JSValue value)
+        => value.As<JSAbortSignal>()
+        ?? throw new InvalidCastException("JSValue is not an AbortSignal.");
 
     public static explicit operator JSAbortSignal(JSObject obj) => (JSAbortSignal)(JSValue)obj;
     public static implicit operator JSObject(JSAbortSignal promise) => (JSObject)promise._value;
@@ -41,10 +44,16 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
     public static explicit operator JSAbortSignal(CancellationToken? cancellation)
         => cancellation.HasValue ? FromCancellationToken(cancellation.Value) : default;
 
+    #region IJSValue<JSAbortSignal> implementation
+
     // TODO: (vmoroz) Implement
-    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsObject();
 
     public static JSAbortSignal CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     private CancellationToken ToCancellationToken()
     {

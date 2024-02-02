@@ -15,8 +15,10 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSMap(JSValue value) => new(value);
-    public static implicit operator JSValue(JSMap map) => map._value;
+    public static implicit operator JSValue(JSMap value) => value.AsJSValue();
+    public static explicit operator JSMap?(JSValue value) => value.As<JSMap>();
+    public static explicit operator JSMap(JSValue value)
+        => value.As<JSMap>() ?? throw new InvalidCastException("JSValue is not a Map.");
 
     public static explicit operator JSMap(JSObject obj) => (JSMap)(JSValue)obj;
     public static implicit operator JSObject(JSMap map) => (JSObject)map._value;
@@ -43,10 +45,16 @@ public readonly partial struct JSMap : IDictionary<JSValue, JSValue>, IEquatable
         _value = JSRuntimeContext.Current.Import(null, "Map").CallAsConstructor(iterable);
     }
 
+    #region IJSValue<JSMap> implementation
+
     // TODO: (vmoroz) Implement using instanceof
-    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsObject();
 
     public static JSMap CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     public int Count => (int)_value["size"];
 

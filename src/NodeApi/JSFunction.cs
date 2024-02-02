@@ -16,8 +16,10 @@ public readonly struct JSFunction : IEquatable<JSValue>
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSFunction(JSValue value) => new(value);
-    public static implicit operator JSValue(JSFunction function) => function._value;
+    public static implicit operator JSValue(JSFunction value) => value.AsJSValue();
+    public static explicit operator JSFunction?(JSValue value) => value.As<JSFunction>();
+    public static explicit operator JSFunction(JSValue value)
+        => value.As<JSFunction>() ?? throw new InvalidCastException("JSValue is not a Function");
 
     private JSFunction(JSValue value)
     {
@@ -270,9 +272,15 @@ public readonly struct JSFunction : IEquatable<JSValue>
     {
     }
 
-    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Function;
+    #region IJSValue<JSFunction> implementation
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsFunction();
 
     public static JSFunction CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     /// <summary>
     /// Gets the name of the function, or an empty string if the function is unnamed.

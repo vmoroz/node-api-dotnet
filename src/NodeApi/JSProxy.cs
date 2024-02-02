@@ -20,8 +20,10 @@ public readonly partial struct JSProxy : IEquatable<JSValue>
     private readonly JSValue _value;
     private readonly JSValue _revoke = default;
 
-    public static explicit operator JSProxy(JSValue value) => new(value);
-    public static implicit operator JSValue(JSProxy proxy) => proxy._value;
+    public static implicit operator JSValue(JSProxy value) => value.AsJSValue();
+    public static explicit operator JSProxy?(JSValue value) => value.As<JSProxy>();
+    public static explicit operator JSProxy(JSValue value)
+        => value.As<JSProxy>() ?? throw new InvalidCastException("JSValue is not a Proxy.");
 
     private JSProxy(JSValue value)
     {
@@ -68,10 +70,16 @@ public readonly partial struct JSProxy : IEquatable<JSValue>
         }
     }
 
+    #region IJSValue<JSProxy> implementation
+
     // TODO: (vmoroz) Implement using instanceof
-    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsObject();
 
     public static JSProxy CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     /// <summary>
     /// Revokes the proxy, so that further access to the target is no longer trapped by

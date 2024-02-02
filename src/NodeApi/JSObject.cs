@@ -15,8 +15,10 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSObject(JSValue value) => new(value);
-    public static implicit operator JSValue(JSObject obj) => obj._value;
+    public static implicit operator JSValue(JSObject value) => value.AsJSValue();
+    public static explicit operator JSObject?(JSValue value) => value.As<JSMap>();
+    public static explicit operator JSObject(JSValue value)
+        => value.As<JSObject>() ?? throw new InvalidCastException("JSValue is not an Object.");
 
     private JSObject(JSValue value)
     {
@@ -27,13 +29,15 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
     {
     }
 
-    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() switch
-    {
-        JSValueType.Object or JSValueType.Function => true,
-        _ => false
-    };
+    #region IJSValue<JSObject> implementation
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsObject();
 
     public static JSObject CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     int ICollection<KeyValuePair<JSValue, JSValue>>.Count
         => _value.GetPropertyNames().GetArrayLength();

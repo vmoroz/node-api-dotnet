@@ -19,8 +19,10 @@ public readonly struct JSSymbol : IEquatable<JSValue>
     private static readonly Lazy<JSReference> s_asyncIteratorSymbol =
         new(() => new JSReference(JSValue.Global["Symbol"]["asyncIterator"]));
 
-    public static explicit operator JSSymbol(JSValue value) => new(value);
-    public static implicit operator JSValue(JSSymbol symbol) => symbol._value;
+    public static implicit operator JSValue(JSSymbol value) => value.AsJSValue();
+    public static explicit operator JSSymbol?(JSValue value) => value.As<JSSymbol>();
+    public static explicit operator JSSymbol(JSValue value)
+        => value.As<JSSymbol>() ?? throw new InvalidCastException("JSValue is not a Symbol.");
 
     private JSSymbol(JSValue value)
     {
@@ -32,10 +34,15 @@ public readonly struct JSSymbol : IEquatable<JSValue>
         _value = JSValue.CreateSymbol(description ?? JSValue.Undefined);
     }
 
-    public static bool CanBeConvertedFrom(JSValue value)
-        => value.TypeOf() == JSValueType.Symbol;
+    #region IJSValue<JSSymbol> implementation
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsSymbol();
 
     public static JSSymbol CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
+
+    public JSValue AsJSValue() => _value;
 
     public static JSSymbol For(string name)
     {
