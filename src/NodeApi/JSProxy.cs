@@ -13,6 +13,9 @@ namespace Microsoft.JavaScript.NodeApi;
 /// Enables creation of JS Proxy objects with C# handler callbacks.
 /// </summary>
 public readonly partial struct JSProxy : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSProxy>
+#endif
 {
     private readonly JSValue _value;
     private readonly JSValue _revoke = default;
@@ -64,6 +67,11 @@ public readonly partial struct JSProxy : IEquatable<JSValue>
             _value = proxyConstructor.CallAsConstructor(jsTarget, handler.JSHandler);
         }
     }
+
+    // TODO: (vmoroz) Implement using instanceof
+    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+
+    public static JSProxy CreateUnchecked(JSValue value) => new(value);
 
     /// <summary>
     /// Revokes the proxy, so that further access to the target is no longer trapped by

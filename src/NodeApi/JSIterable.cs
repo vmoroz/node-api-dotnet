@@ -9,6 +9,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSIterable : IEnumerable<JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSIterable>
+#endif
 {
     private readonly JSValue _value;
 
@@ -25,6 +28,12 @@ public readonly partial struct JSIterable : IEnumerable<JSValue>, IEquatable<JSV
     {
         _value = value;
     }
+
+    //TODO: (vmoroz) implement proper check using Symbol.iterator
+    public static bool CanBeConvertedFrom(JSValue value) =>
+        value.TypeOf() == JSValueType.Object;
+
+    public static JSIterable CreateUnchecked(JSValue value) => new(value);
 
     public Enumerator GetEnumerator() => new(_value);
 

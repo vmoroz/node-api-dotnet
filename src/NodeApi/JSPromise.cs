@@ -15,6 +15,9 @@ namespace Microsoft.JavaScript.NodeApi;
 /// </summary>
 /// <seealso cref="TaskExtensions"/>
 public readonly struct JSPromise : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSPromise>
+#endif
 {
     private readonly JSValue _value;
 
@@ -28,6 +31,10 @@ public readonly struct JSPromise : IEquatable<JSValue>
     {
         _value = value;
     }
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsPromise();
+
+    public static JSPromise CreateUnchecked(JSValue value) => new(value);
 
     public delegate void ResolveCallback(Action<JSValue> resolve);
 

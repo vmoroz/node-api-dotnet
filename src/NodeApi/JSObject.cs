@@ -9,6 +9,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSObject>
+#endif
 {
     private readonly JSValue _value;
 
@@ -23,6 +26,14 @@ public readonly partial struct JSObject : IDictionary<JSValue, JSValue>, IEquata
     public JSObject() : this(JSValue.CreateObject())
     {
     }
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() switch
+    {
+        JSValueType.Object or JSValueType.Function => true,
+        _ => false
+    };
+
+    public static JSObject CreateUnchecked(JSValue value) => new(value);
 
     int ICollection<KeyValuePair<JSValue, JSValue>>.Count
         => _value.GetPropertyNames().GetArrayLength();

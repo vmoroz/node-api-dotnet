@@ -8,11 +8,16 @@ using System.Numerics;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly struct JSBigInt : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSBigInt>
+#endif
 {
     private readonly JSValue _value;
 
-    public static explicit operator JSBigInt(JSValue value) => new(value);
-    public static implicit operator JSValue(JSBigInt value) => value._value;
+    public static implicit operator JSValue(JSBigInt value) => value.AsJSValue();
+    public static explicit operator JSBigInt?(JSValue value) => value.As<JSBigInt>();
+    public static explicit operator JSBigInt(JSValue value)
+        => value.As<JSBigInt>() ?? throw new InvalidCastException("JSValue is not BigInt");
 
     public static implicit operator JSBigInt(BigInteger value) => new(value);
     public static explicit operator BigInteger(JSBigInt value) => value.ToBigInteger();
@@ -38,6 +43,14 @@ public readonly struct JSBigInt : IEquatable<JSValue>
     public JSBigInt(BigInteger value) : this(JSValue.CreateBigInt(value))
     {
     }
+
+    #region IJSValue<JSBigInt> implementation
+
+    public static bool CanBeConvertedFrom(JSValue value) => value.IsBigInt();
+
+    public static JSBigInt CreateUnchecked(JSValue value) => new(value);
+
+    #endregion
 
     public int GetWordCount() => _value.GetBigIntWordCount();
 

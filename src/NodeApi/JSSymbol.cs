@@ -7,6 +7,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace Microsoft.JavaScript.NodeApi;
 
 public readonly struct JSSymbol : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSSymbol>
+#endif
 {
     private readonly JSValue _value;
 
@@ -28,6 +31,11 @@ public readonly struct JSSymbol : IEquatable<JSValue>
     {
         _value = JSValue.CreateSymbol(description ?? JSValue.Undefined);
     }
+
+    public static bool CanBeConvertedFrom(JSValue value)
+        => value.TypeOf() == JSValueType.Symbol;
+
+    public static JSSymbol CreateUnchecked(JSValue value) => new(value);
 
     public static JSSymbol For(string name)
     {

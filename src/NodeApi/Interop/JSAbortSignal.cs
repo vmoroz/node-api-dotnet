@@ -16,6 +16,9 @@ namespace Microsoft.JavaScript.NodeApi.Interop;
 /// https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
 /// </remarks>
 public readonly struct JSAbortSignal : IEquatable<JSValue>
+#if NET7_0_OR_GREATER
+    , IJSValue<JSAbortSignal>
+#endif
 {
     private readonly JSValue _value;
 
@@ -37,6 +40,11 @@ public readonly struct JSAbortSignal : IEquatable<JSValue>
         => FromCancellationToken(cancellation);
     public static explicit operator JSAbortSignal(CancellationToken? cancellation)
         => cancellation.HasValue ? FromCancellationToken(cancellation.Value) : default;
+
+    // TODO: (vmoroz) Implement
+    public static bool CanBeConvertedFrom(JSValue value) => value.TypeOf() == JSValueType.Object;
+
+    public static JSAbortSignal CreateUnchecked(JSValue value) => new(value);
 
     private CancellationToken ToCancellationToken()
     {
