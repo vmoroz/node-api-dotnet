@@ -334,13 +334,12 @@ public unsafe partial class JSRuntime
     {
 #if UNMANAGED_DELEGATES
         public node_embedding_get_args_callback(delegate* unmanaged[Cdecl]<
-            nint, int, nint, node_embedding_status> handle)
+            nint, int, nint, void> handle)
             : this((nint)handle) { }
 #endif
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate node_embedding_status Delegate(
-            nint cb_data, int argc, nint argv);
+        public delegate void Delegate(nint cb_data, int argc, nint argv);
 
         public node_embedding_get_args_callback(Delegate callback)
             : this(Marshal.GetFunctionPointerForDelegate(callback)) { }
@@ -556,74 +555,74 @@ public unsafe partial class JSRuntime
 
     public struct node_embedding_handle_error_functor
     {
-        nint data;
-        node_embedding_handle_error_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_handle_error_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_get_args_functor_ref
     {
-        nint data;
-        node_embedding_get_args_callback invoke;
+        public nint data;
+        public node_embedding_get_args_callback invoke;
     }
 
     public struct node_embedding_configure_platform_functor_ref
     {
-        nint data;
-        node_embedding_configure_platform_callback invoke;
+        public nint data;
+        public node_embedding_configure_platform_callback invoke;
     }
 
     public struct node_embedding_configure_runtime_functor_ref
     {
-        nint data;
-        node_embedding_configure_runtime_callback invoke;
+        public nint data;
+        public node_embedding_configure_runtime_callback invoke;
     }
 
     public struct node_embedding_preload_functor
     {
-        nint data;
-        node_embedding_preload_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_preload_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_start_execution_functor
     {
-        nint data;
-        node_embedding_start_execution_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_start_execution_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_handle_result_functor
     {
-        nint data;
-        node_embedding_handle_result_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_handle_result_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_initialize_module_functor
     {
-        nint data;
-        node_embedding_initialize_module_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_initialize_module_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_run_task_functor
     {
-        nint data;
-        node_embedding_run_task_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_run_task_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_post_task_functor
     {
-        nint data;
-        node_embedding_post_task_callback invoke;
-        node_embedding_release_data_callback release;
+        public nint data;
+        public node_embedding_post_task_callback invoke;
+        public node_embedding_release_data_callback release;
     }
 
     public struct node_embedding_run_node_api_functor_ref
     {
-        nint data;
-        node_embedding_run_node_api_callback invoke;
+        public nint data;
+        public node_embedding_run_node_api_callback invoke;
     }
 }
