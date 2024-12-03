@@ -23,6 +23,9 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 {
     private node_embedding_platform _platform;
 
+    public static implicit operator node_embedding_platform(NodejsEmbeddingPlatform platform)
+        => platform._platform;
+
     public delegate node_embedding_status HandleErrorCallback(
         string[] messages, node_embedding_status status);
     public delegate node_embedding_status ConfigurePlatformCallback(
@@ -49,8 +52,13 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
         public HandleErrorCallback? OnError { get; set; }
     }
 
-    //    public delegate void ConfigurePlatform();
-
+    /// <summary>
+    /// Initializes the Node.js platform.
+    /// </summary>
+    /// <param name="libnodePath">Path to the `libnode` shared library, including extension.</param>
+    /// <param name="settings">Optional platform settings.</param>
+    /// <exception cref="InvalidOperationException">A Node.js platform instance has already been
+    /// loaded in the current process.</exception>
     public static unsafe NodejsEmbeddingPlatform Initialize(string libnodePath, Settings? settings)
     {
         if (string.IsNullOrEmpty(libnodePath)) throw new ArgumentNullException(nameof(libnodePath));
@@ -113,6 +121,10 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
         _platform = platform;
     }
 
+    /// <summary>
+    /// Disposes the platform. After disposal, another platform instance may not be initialized
+    /// in the current process.
+    /// </summary>
     public void Dispose()
     {
         if (IsDisposed) return;
@@ -120,77 +132,17 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
         Runtime?.EmbeddingDeletePlatform(_platform);
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the current platform has been disposed.
+    /// </summary>
     public bool IsDisposed { get; private set; }
 
+    /// <summary>
+    /// Gets the Node.js platform instance for the current process, or null if not initialized.
+    /// </summary>
     public static NodejsEmbeddingPlatform? Current { get; private set; }
 
     public static JSRuntime? Runtime { get; private set; }
-
-    //    private readonly node_embedding_platform _platform;
-
-    //    public static implicit operator node_embedding_platform(NodeEmbeddingPlatform platform)
-    //        => platform._platform;
-
-    //    public static void SetErrorHandler(HandleErrorCallback callback)
-    //    {
-    //        if (callback == null)
-    //        {
-    //            throw new ArgumentNullException(nameof(callback));
-    //        }
-    //        Runtime.EmbeddingOnError(s_handleErrorCallback, GCHandle.Alloc(callback).ToIntPtr())
-    //            .ThrowIfFailed();
-    //    }
-
-    //    /// <summary>
-    //    /// Initializes the Node.js platform.
-    //    /// </summary>
-    //    /// <param name="libnodePath">Path to the `libnode` shared library, including extension.</param>
-    //    /// <param name="args">Optional platform arguments.</param>
-    //    /// <exception cref="InvalidOperationException">A Node.js platform instance has already been
-    //    /// loaded in the current process.</exception>
-    //    public NodeEmbeddingPlatform(
-    //        string libnodePath,
-    //        string[]? args = null)
-    //    {
-    //        if (string.IsNullOrEmpty(libnodePath)) throw new ArgumentNullException(nameof(libnodePath));
-
-    //        if (Current != null)
-    //        {
-    //            throw new InvalidOperationException(
-    //                "Only one Node.js platform instance per process is allowed.");
-    //        }
-
-    //        nint libnodeHandle = NativeLibrary.Load(libnodePath);
-    //        Runtime = new NodejsRuntime(libnodeHandle);
-
-    //        Runtime.EmbeddingCreatePlatform(args, (error) => Console.WriteLine(error), out _platform)
-    //            .ThrowIfFailed();
-    //        Current = this;
-    //    }
-
-    //    /// <summary>
-    //    /// Gets the Node.js platform instance for the current process, or null if not initialized.
-    //    /// </summary>
-    //    public static NodeEmbeddingPlatform? Current { get; private set; }
-
-    //    public JSRuntime Runtime { get; }
-
-    //    /// <summary>
-    //    /// Gets a value indicating whether the current platform has been disposed.
-    //    /// </summary>
-    //    public bool IsDisposed { get; private set; }
-
-    //    /// <summary>
-    //    /// Disposes the platform. After disposal, another platform instance may not be initialized
-    //    /// in the current process.
-    //    /// </summary>
-    //    public void Dispose()
-    //    {
-    //        if (IsDisposed) return;
-    //        IsDisposed = true;
-
-    //        Runtime.DestroyPlatform(_platform);
-    //    }
 
     //    /// <summary>
     //    /// Creates a new Node.js environment with a dedicated main thread.
