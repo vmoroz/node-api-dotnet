@@ -2,23 +2,14 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Diagnostics;
+#if UNMANAGED_DELEGATES
 using System.Runtime.CompilerServices;
+#endif
 using System.Runtime.InteropServices;
 
 namespace Microsoft.JavaScript.NodeApi.Runtime;
 
 using static JSRuntime;
-
-public sealed class NodejsEmbeddingRuntime
-{
-    private node_embedding_runtime _runtime;
-
-    public NodejsEmbeddingRuntime(node_embedding_runtime runtime)
-    {
-        _runtime = runtime;
-    }
-}
 
 /// <summary>
 /// Manages a Node.js platform instance, provided by `libnode`.
@@ -28,7 +19,7 @@ public sealed class NodejsEmbeddingRuntime
 /// another platform instance cannot be re-initialized. One or more <see cref="NodejsEnvironment" />
 /// instances may be created using the platform.
 /// </remarks>
-public sealed class EmbeddedNodejs : IDisposable
+public sealed class NodejsEmbeddingPlatform : IDisposable
 {
     private node_embedding_platform _platform;
 
@@ -60,7 +51,7 @@ public sealed class EmbeddedNodejs : IDisposable
 
     //    public delegate void ConfigurePlatform();
 
-    public static unsafe EmbeddedNodejs Initialize(string libnodePath, Settings? settings)
+    public static unsafe NodejsEmbeddingPlatform Initialize(string libnodePath, Settings? settings)
     {
         if (string.IsNullOrEmpty(libnodePath)) throw new ArgumentNullException(nameof(libnodePath));
         if (Current != null)
@@ -112,12 +103,12 @@ public sealed class EmbeddedNodejs : IDisposable
             GCHandle.FromIntPtr(configurePlatformFunctor.data).Free();
         }
 
-        Current = new EmbeddedNodejs(platform);
+        Current = new NodejsEmbeddingPlatform(platform);
 
         return Current;
     }
 
-    private EmbeddedNodejs(node_embedding_platform platform)
+    private NodejsEmbeddingPlatform(node_embedding_platform platform)
     {
         _platform = platform;
     }
@@ -131,7 +122,7 @@ public sealed class EmbeddedNodejs : IDisposable
 
     public bool IsDisposed { get; private set; }
 
-    public static EmbeddedNodejs? Current { get; private set; }
+    public static NodejsEmbeddingPlatform? Current { get; private set; }
 
     public static JSRuntime? Runtime { get; private set; }
 

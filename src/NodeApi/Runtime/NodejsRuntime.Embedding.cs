@@ -284,7 +284,7 @@ public unsafe partial class NodejsRuntime
     public override node_embedding_status
         EmbeddingTerminateEventLoop(node_embedding_runtime runtime)
     {
-        return Import(ref node_embedding_complete_event_loop)(runtime);
+        return Import(ref node_embedding_terminate_event_loop)(runtime);
     }
 
     public override node_embedding_status EmbeddingRunNodeApi(
