@@ -84,7 +84,7 @@ public abstract class Benchmarks
     /// </summary>
     protected void Setup()
     {
-        NodejsPlatform platform = new(LibnodePath/*, args: new[] { "node", "--expose-gc" }*/);
+        NodeEmbeddingPlatform platform = new(LibnodePath/*, args: new[] { "node", "--expose-gc" }*/);
 
         // This setup avoids using NodejsEnvironment so benchmarks can run on the same thread.
         // NodejsEnvironment creates a separate thread that would slow down the micro-benchmarks.

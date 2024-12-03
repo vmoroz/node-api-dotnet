@@ -61,7 +61,7 @@ public class TracingJSRuntime : JSRuntime
 
     #region Formatting
 
-    private static string Format(napi_platform platform) => platform.Handle.ToString("X16");
+    //private static string Format(napi_platform platform) => platform.Handle.ToString("X16");
     private static string Format(napi_env env) => env.Handle.ToString("X16");
     private static string Format(napi_handle_scope scope) => scope.Handle.ToString("X16");
     private static string Format(napi_escapable_handle_scope scope) => scope.Handle.ToString("X16");
@@ -2654,71 +2654,6 @@ public class TracingJSRuntime : JSRuntime
     #endregion
 
     #region Embedding
-
-    public override napi_status CreatePlatform(
-        string[]? args, Action<string>? errorHandler, out napi_platform result)
-    {
-        napi_platform resultValue = default;
-        napi_status status = TraceCall(
-            [
-                $"[{string.Join(", ", args ?? [])}]",
-            ],
-            () => (_runtime.CreatePlatform(args, errorHandler, out resultValue),
-                Format(resultValue)));
-        result = resultValue;
-        return status;
-    }
-
-    public override napi_status DestroyPlatform(napi_platform platform)
-    {
-        return TraceCall(
-            [Format(platform)],
-            () => _runtime.DestroyPlatform(platform));
-    }
-
-    public override napi_status CreateEnvironment(
-        napi_platform platform,
-        Action<string>? errorHandler,
-        string? mainScript,
-        int apiVersion,
-        out napi_env result)
-    {
-        napi_env resultValue = default;
-        napi_status status = TraceCall(
-            [Format(platform), Format(mainScript)],
-            () => (_runtime.CreateEnvironment(
-                platform, errorHandler, mainScript, apiVersion, out resultValue),
-                Format(resultValue)));
-        result = resultValue;
-        return status;
-    }
-
-    public override napi_status DestroyEnvironment(napi_env env, out int exitCode)
-    {
-        int exitCodeValue = default;
-        napi_status status = TraceCall(
-            [Format(env)],
-            () => (_runtime.DestroyEnvironment(env, out exitCodeValue),
-                exitCodeValue.ToString()));
-        exitCode = exitCodeValue;
-        return status;
-    }
-
-    public override napi_status RunEnvironment(napi_env env)
-    {
-        return TraceCall([Format(env)], () => _runtime.RunEnvironment(env));
-    }
-
-    public override napi_status AwaitPromise(
-        napi_env env, napi_value promise, out napi_value result)
-    {
-        napi_value resultValue = default;
-        napi_status status = TraceCall(
-            [Format(env, promise)],
-            () => (_runtime.AwaitPromise(env, promise, out resultValue), Format(env, resultValue)));
-        result = resultValue;
-        return status;
-    }
 
     #endregion
 }
