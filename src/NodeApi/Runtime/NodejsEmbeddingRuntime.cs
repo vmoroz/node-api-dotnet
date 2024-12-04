@@ -18,6 +18,8 @@ using static NodejsEmbedding;
 public sealed class NodejsEmbeddingRuntime : IDisposable
 {
     private node_embedding_runtime _runtime;
+    private static readonly
+        Dictionary<node_embedding_runtime, NodejsEmbeddingRuntime> _embeddedRuntimes = new();
 
     public static implicit operator node_embedding_runtime(NodejsEmbeddingRuntime runtime)
         => runtime._runtime;
@@ -138,9 +140,23 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
             .ThrowIfFailed();
     }
 
-    internal NodejsEmbeddingRuntime(node_embedding_runtime runtime)
+    private NodejsEmbeddingRuntime(node_embedding_runtime runtime)
     {
         _runtime = runtime;
+        lock (_embeddedRuntimes) { _embeddedRuntimes.Add(runtime, this); }
+    }
+
+    public static NodejsEmbeddingRuntime? FromHandle(node_embedding_runtime runtime)
+    {
+        lock (_embeddedRuntimes)
+        {
+            if (_embeddedRuntimes.TryGetValue(
+                runtime, out NodejsEmbeddingRuntime? embeddingRuntime))
+            {
+                return embeddingRuntime;
+            }
+            return null;
+        }
     }
 
     public static void Run(NodejsEmbeddingPlatform platform, RuntimeSettings? settings)
@@ -161,6 +177,7 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
         if (IsDisposed) return;
         IsDisposed = true;
 
+        lock (_embeddedRuntimes) { _embeddedRuntimes.Remove(_runtime); }
         JSRuntime.EmbeddingDeleteRuntime(_runtime).ThrowIfFailed();
     }
 

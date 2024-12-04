@@ -13,7 +13,7 @@ using static NodejsEmbedding;
 /// </summary>
 /// <remarks>
 /// Only one Node.js platform instance can be created per process. Once the platform is disposed,
-/// another platform instance cannot be re-initialized. One or more <see cref="NodejsEnvironment" />
+/// another platform instance cannot be re-initialized. One or more <see cref="NodejsEmbeddingThreadRuntime" />
 /// instances may be created using the platform.
 /// </remarks>
 public sealed class NodejsEmbeddingPlatform : IDisposable
@@ -118,23 +118,24 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
         JSRuntime.EmbeddingDeletePlatform(_platform);
     }
 
-    //    /// <summary>
-    //    /// Creates a new Node.js environment with a dedicated main thread.
-    //    /// </summary>
-    //    /// <param name="baseDir">Optional directory that is used as the base directory when resolving
-    //    /// imported modules, and also as the value of the global `__dirname` property. If unspecified,
-    //    /// importing modules is not enabled and `__dirname` is undefined.</param>
-    //    /// <param name="mainScript">Optional script to run in the environment. (Literal script content,
-    //    /// not a path to a script file.)</param>
-    //    /// <returns>A new <see cref="NodejsEnvironment" /> instance.</returns>
-    //    public NodejsEnvironment CreateEnvironment(
-    //        string? baseDir = null,
-    //        string? mainScript = null)
-    //    {
-    //        if (IsDisposed) throw new ObjectDisposedException(nameof(NodeEmbeddingPlatform));
+    /// <summary>
+    /// Creates a new Node.js embedding runtime with a dedicated main thread.
+    /// </summary>
+    /// <param name="baseDir">Optional directory that is used as the base directory when resolving
+    /// imported modules, and also as the value of the global `__dirname` property. If unspecified,
+    /// importing modules is not enabled and `__dirname` is undefined.</param>
+    /// <param name="mainScript">Optional script to run in the environment. (Literal script content,
+    /// not a path to a script file.)</param>
+    /// <returns>A new <see cref="NodejsEmbeddingThreadRuntime" /> instance.</returns>
+    public NodejsEmbeddingThreadRuntime CreateThreadRuntime(
+        string? baseDir = null,
+        string? mainScript = null,
+        NodejsEmbeddingRuntime.RuntimeSettings? settings = null)
+    {
+        if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
 
-    //        return new NodejsEnvironment(this, baseDir, mainScript);
-    //    }
+        return new NodejsEmbeddingThreadRuntime(this, baseDir, mainScript, settings);
+    }
 
     public unsafe void GetParsedArgs(GetArgsCallback? getArgs, GetArgsCallback? getRuntimeArgs)
     {
