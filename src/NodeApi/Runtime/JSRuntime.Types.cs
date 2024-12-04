@@ -349,7 +349,7 @@ public unsafe partial class JSRuntime
     {
 #if UNMANAGED_DELEGATES
         public node_embedding_preload_callback(delegate* unmanaged[Cdecl]<
-            nint, int, nint, void> handle)
+            nint, node_embedding_runtime, napi_env, napi_value, napi_value, void> handle)
             : this((nint)handle) { }
 #endif
 
@@ -606,6 +606,22 @@ public unsafe partial class JSRuntime
     {
         public nint data;
         public node_embedding_configure_runtime_callback invoke;
+
+        public node_embedding_configure_runtime_functor_ref(
+            object? functor, node_embedding_configure_runtime_callback invoke)
+        {
+            data = (functor != null) ? (nint)GCHandle.Alloc(functor) : default;
+            this.invoke = (functor != null)
+                ? invoke
+                : new node_embedding_configure_runtime_callback(0);
+        }
+
+        public void Dispose()
+        {
+            if (data == 0) return;
+            GCHandle.FromIntPtr(data).Free();
+            data = 0;
+        }
     }
 
     public struct node_embedding_preload_functor
