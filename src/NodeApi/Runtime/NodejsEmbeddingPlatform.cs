@@ -23,32 +23,6 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     public static implicit operator node_embedding_platform(NodejsEmbeddingPlatform platform)
         => platform._platform;
 
-    public class PlatformSettings
-    {
-        public node_embedding_platform_flags? PlatformFlags { get; set; }
-        public string[]? Args { get; set; }
-        public HandleErrorCallback? OnError { get; set; }
-        public ConfigurePlatformCallback? ConfigurePlatform { get; set; }
-
-        public static unsafe implicit operator node_embedding_configure_platform_functor_ref(
-            PlatformSettings? settings)
-        {
-            var confgurePlatform = new ConfigurePlatformCallback((config) =>
-            {
-                if (settings?.PlatformFlags != null)
-                {
-                    JSRuntime.EmbeddingPlatformSetFlags(config, settings.PlatformFlags.Value)
-                        .ThrowIfFailed();
-                }
-                settings?.ConfigurePlatform?.Invoke(config);
-            });
-
-            return new node_embedding_configure_platform_functor_ref(
-                confgurePlatform,
-                new node_embedding_configure_platform_callback(s_configurePlatformCallback));
-        }
-    }
-
     /// <summary>
     /// Initializes the Node.js platform.
     /// </summary>
@@ -56,15 +30,16 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     /// <param name="settings">Optional platform settings.</param>
     /// <exception cref="InvalidOperationException">A Node.js platform instance has already been
     /// loaded in the current process.</exception>
-    public static unsafe NodejsEmbeddingPlatform Initialize(
-        string libnodePath, PlatformSettings? settings)
+    public unsafe NodejsEmbeddingPlatform(
+        string libnodePath, NodejsEmbeddingPlatformSettings? settings)
     {
         if (Current != null)
         {
             throw new InvalidOperationException(
                 "Only one Node.js platform instance per process is allowed.");
         }
-        NodejsEmbedding.Initialize(libnodePath);
+        Current = this;
+        Initialize(libnodePath);
 
         if (settings?.OnError != null)
         {
@@ -80,14 +55,11 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
         JSRuntime.EmbeddingSetApiVersion(EmbeddingApiVersion, NodeApiVersion).ThrowIfFailed();
 
         using node_embedding_configure_platform_functor_ref configurePlatformFunctorRef =
-            settings ?? new PlatformSettings();
+            settings ?? new NodejsEmbeddingPlatformSettings();
 
         JSRuntime.EmbeddingCreatePlatform(
-            settings?.Args, configurePlatformFunctorRef, out node_embedding_platform platform)
+            settings?.Args, configurePlatformFunctorRef, out _platform)
             .ThrowIfFailed();
-
-        Current = new NodejsEmbeddingPlatform(platform);
-        return Current;
     }
 
     internal NodejsEmbeddingPlatform(node_embedding_platform platform)
@@ -130,7 +102,7 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     public NodejsEmbeddingThreadRuntime CreateThreadRuntime(
         string? baseDir = null,
         string? mainScript = null,
-        NodejsEmbeddingRuntime.RuntimeSettings? settings = null)
+        NodejsEmbeddingRuntimeSettings? settings = null)
     {
         if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
 

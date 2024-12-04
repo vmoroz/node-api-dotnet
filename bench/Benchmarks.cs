@@ -85,9 +85,9 @@ public abstract class Benchmarks
     /// </summary>
     protected void Setup()
     {
-        NodejsEmbeddingPlatform platform = NodejsEmbeddingPlatform.Initialize(
+        NodejsEmbeddingPlatform platform = new(
             LibnodePath,
-            new NodejsEmbeddingPlatform.PlatformSettings { Args = new[] { "node", "--expose-gc" } });
+            new NodejsEmbeddingPlatformSettings { Args = new[] { "node", "--expose-gc" } });
 
         // This setup avoids using NodejsEmbeddingThreadRuntime so benchmarks can run on
         // the same thread. NodejsEmbeddingThreadRuntime creates a separate thread that would slow

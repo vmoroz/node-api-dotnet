@@ -37,7 +37,7 @@ public sealed class NodejsEmbeddingThreadRuntime : IDisposable
         NodejsEmbeddingPlatform platform,
         string? baseDir,
         string? mainScript,
-        NodejsEmbeddingRuntime.RuntimeSettings? settings)
+        NodejsEmbeddingRuntimeSettings? settings)
     {
         JSValueScope scope = null!;
         JSSynchronizationContext syncContext = null!;

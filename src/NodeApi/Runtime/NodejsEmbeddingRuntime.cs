@@ -5,7 +5,6 @@ namespace Microsoft.JavaScript.NodeApi.Runtime;
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using static JSRuntime;
 using static NodejsEmbedding;
 
@@ -31,113 +30,13 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
         public int? NodeApiVersion { get; set; }
     }
 
-    public class RuntimeSettings
-    {
-        public node_embedding_runtime_flags? RuntimeFlags { get; set; }
-        public string[]? Args { get; set; }
-        public string[]? RuntimeArgs { get; set; }
-        public PreloadCallback? OnPreload { get; set; }
-        public StartExecutionCallback? StartExecution { get; set; }
-        public HandleResultCallback? HandleStartExecutionResult { get; set; }
-        public IEnumerable<Module>? Modules { get; set; }
-        public PostTaskCallback? OnPostTask { get; set; }
-        public ConfigureRuntimeCallback? ConfigureRuntime { get; set; }
-
-        public static unsafe implicit operator node_embedding_configure_runtime_functor_ref(
-            RuntimeSettings? settings)
-        {
-            var confgureRuntime = new ConfigureRuntimeCallback((platform, config) =>
-            {
-                if (settings?.RuntimeFlags != null)
-                {
-                    JSRuntime.EmbeddingRuntimeSetFlags(config, settings.RuntimeFlags.Value)
-                        .ThrowIfFailed();
-                }
-                if (settings?.Args != null || settings?.RuntimeArgs != null)
-                {
-                    JSRuntime.EmbeddingRuntimeSetArgs(config, settings.Args, settings.RuntimeArgs)
-                        .ThrowIfFailed();
-                }
-                if (settings?.OnPreload != null)
-                {
-                    var preloadFunctor = new node_embedding_preload_functor
-                    {
-                        data = (nint)GCHandle.Alloc(settings.OnPreload),
-                        invoke = new node_embedding_preload_callback(s_preloadCallback),
-                        release = new node_embedding_release_data_callback(s_releaseDataCallback),
-                    };
-                    JSRuntime.EmbeddingRuntimeOnPreload(config, preloadFunctor).ThrowIfFailed();
-                }
-                if (settings?.StartExecution != null)
-                {
-                    var startExecutionFunctor = new node_embedding_start_execution_functor
-                    {
-                        data = (nint)GCHandle.Alloc(settings.StartExecution),
-                        invoke = new node_embedding_start_execution_callback(
-                            s_startExecutionCallback),
-                        release = new node_embedding_release_data_callback(s_releaseDataCallback),
-                    };
-                    var handleStartExecutionResultFunctor = new node_embedding_handle_result_functor
-                    {
-                        data = settings.HandleStartExecutionResult != null
-                            ? (nint)GCHandle.Alloc(settings.HandleStartExecutionResult) : 0,
-                        invoke = settings.HandleStartExecutionResult != null
-                            ? new node_embedding_handle_result_callback(s_handleResultCallback)
-                            : new node_embedding_handle_result_callback(0),
-                        release = settings.HandleStartExecutionResult != null
-                            ? new node_embedding_release_data_callback(s_releaseDataCallback)
-                            : new node_embedding_release_data_callback(0),
-                    };
-                    JSRuntime.EmbeddingRuntimeOnStartExecution(
-                        config, startExecutionFunctor, handleStartExecutionResultFunctor)
-                        .ThrowIfFailed();
-                }
-                if (settings?.Modules != null)
-                {
-                    foreach (Module module in settings.Modules)
-                    {
-                        var moduleFunctor = new node_embedding_initialize_module_functor
-                        {
-                            data = (nint)GCHandle.Alloc(module.OnInitialize),
-                            invoke = new node_embedding_initialize_module_callback(
-                                s_initializeModuleCallback),
-                            release = new node_embedding_release_data_callback(
-                                s_releaseDataCallback),
-                        };
-
-                        JSRuntime.EmbeddingRuntimeAddModule(
-                            config,
-                            module.Name,
-                            moduleFunctor,
-                            module.NodeApiVersion ?? NodeApiVersion)
-                            .ThrowIfFailed();
-                    }
-                }
-                if (settings?.OnPostTask != null)
-                {
-                    var postTaskFunctor = new node_embedding_post_task_functor
-                    {
-                        data = (nint)GCHandle.Alloc(settings.OnPostTask),
-                        invoke = new node_embedding_post_task_callback(s_postTaskCallback),
-                        release = new node_embedding_release_data_callback(s_releaseDataCallback),
-                    };
-                    JSRuntime.EmbeddingRuntimeSetTaskRunner(config, postTaskFunctor).ThrowIfFailed();
-                }
-                settings?.ConfigureRuntime?.Invoke(platform, config);
-            });
-
-            return new node_embedding_configure_runtime_functor_ref(
-                confgureRuntime,
-                new node_embedding_configure_runtime_callback(s_configureRuntimeCallback));
-        }
-    }
-
     public static JSRuntime JSRuntime => NodejsEmbedding.JSRuntime;
 
     public NodejsEmbeddingRuntime(
-        NodejsEmbeddingPlatform platform, RuntimeSettings? settings = null)
+        NodejsEmbeddingPlatform platform, NodejsEmbeddingRuntimeSettings? settings = null)
     {
-        JSRuntime.EmbeddingCreateRuntime(platform, settings ?? new RuntimeSettings(), out _runtime)
+        JSRuntime.EmbeddingCreateRuntime(
+            platform, settings ?? new NodejsEmbeddingRuntimeSettings(), out _runtime)
             .ThrowIfFailed();
     }
 
@@ -160,9 +59,11 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
         }
     }
 
-    public static void Run(NodejsEmbeddingPlatform platform, RuntimeSettings? settings)
+    public static void Run(NodejsEmbeddingPlatform platform,
+        NodejsEmbeddingRuntimeSettings? settings = null)
     {
-        JSRuntime.EmbeddingRunRuntime(platform, settings ?? new RuntimeSettings()).ThrowIfFailed();
+        JSRuntime.EmbeddingRunRuntime(platform, settings ?? new NodejsEmbeddingRuntimeSettings())
+            .ThrowIfFailed();
     }
 
     /// <summary>
