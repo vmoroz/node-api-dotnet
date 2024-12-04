@@ -134,7 +134,8 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
 
     public static JSRuntime JSRuntime => NodejsEmbedding.JSRuntime;
 
-    public NodejsEmbeddingRuntime(NodejsEmbeddingPlatform platform, RuntimeSettings? settings)
+    public NodejsEmbeddingRuntime(
+        NodejsEmbeddingPlatform platform, RuntimeSettings? settings = null)
     {
         JSRuntime.EmbeddingCreateRuntime(platform, settings ?? new RuntimeSettings(), out _runtime)
             .ThrowIfFailed();

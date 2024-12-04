@@ -12,7 +12,7 @@ public sealed class NodejsEmbeddingNodeApiScope : IDisposable
     private node_embedding_node_api_scope _nodeApiScope;
     private JSValueScope _valueScope;
 
-    internal NodejsEmbeddingNodeApiScope(NodejsEmbeddingRuntime runtime)
+    public NodejsEmbeddingNodeApiScope(NodejsEmbeddingRuntime runtime)
     {
         _runtime = runtime;
         NodejsEmbeddingRuntime.JSRuntime.EmbeddingOpenNodeApiScope(
