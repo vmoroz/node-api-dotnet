@@ -10,28 +10,45 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static JSRuntime;
 
+/// <summary>
+/// Shared code for the Node.js embedding classes.
+/// </summary>
 public sealed class NodejsEmbedding
 {
     public static readonly int EmbeddingApiVersion = 1;
     public static readonly int NodeApiVersion = 9;
 
+    private static JSRuntime? _jsRuntime;
+
     public static JSRuntime JSRuntime
     {
         get
         {
-            if (NodejsEmbeddingPlatform.JSRuntime == null)
+            if (_jsRuntime == null)
             {
                 throw new InvalidOperationException("The JSRuntime is not initialized.");
             }
-            return NodejsEmbeddingPlatform.JSRuntime;
+            return _jsRuntime;
         }
+    }
+
+    public static void Initialize(string libnodePath)
+    {
+        if (string.IsNullOrEmpty(libnodePath)) throw new ArgumentNullException(nameof(libnodePath));
+        if (_jsRuntime != null)
+        {
+            throw new InvalidOperationException(
+                "The JSRuntime can be initialized only once per process.");
+        }
+        nint libnodeHandle = NativeLibrary.Load(libnodePath);
+        _jsRuntime = new NodejsRuntime(libnodeHandle);
     }
 
     public delegate node_embedding_status HandleErrorCallback(
         string[] messages, node_embedding_status status);
-    public delegate node_embedding_status ConfigurePlatformCallback(
+    public delegate void ConfigurePlatformCallback(
         node_embedding_platform_config platformConfig);
-    public delegate node_embedding_status ConfigureRuntimeCallback(
+    public delegate void ConfigureRuntimeCallback(
         node_embedding_platform platform, node_embedding_runtime_config platformConfig);
     public delegate void GetArgsCallback(string[] args);
     public delegate void PreloadCallback(
@@ -127,114 +144,171 @@ public sealed class NodejsEmbedding
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe node_embedding_status HandleErrorCallbackAdapter(
-       nint cb_data,
-       nint messages,
-       nuint messages_size,
-       node_embedding_status status)
+        nint cb_data,
+        nint messages,
+        nuint messages_size,
+        node_embedding_status status)
     {
-        var callback = (HandleErrorCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        return callback(Utf8StringArray.ToStringArray(messages, (int)messages_size), status);
+        try
+        {
+            var callback = (HandleErrorCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            return callback(Utf8StringArray.ToStringArray(messages, (int)messages_size), status);
+        }
+        catch (Exception)
+        {
+            return node_embedding_status.generic_error;
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe node_embedding_status ConfigurePlatformCallbackAdapter(
-           nint cb_data,
-           node_embedding_platform_config platform_config)
+        nint cb_data,
+        node_embedding_platform_config platform_config)
     {
-        var callback = (ConfigurePlatformCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        return callback(platform_config);
+        try
+        {
+            var callback = (ConfigurePlatformCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            callback(platform_config);
+            return node_embedding_status.ok;
+        }
+        catch (Exception)
+        {
+            return node_embedding_status.generic_error;
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe node_embedding_status ConfigureRuntimeCallbackAdapter(
-           nint cb_data,
-           node_embedding_platform platform,
-           node_embedding_runtime_config runtime_config)
+        nint cb_data,
+        node_embedding_platform platform,
+        node_embedding_runtime_config runtime_config)
     {
-        var callback = (ConfigureRuntimeCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        return callback(platform, runtime_config);
+        try
+        {
+            var callback = (ConfigureRuntimeCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            callback(platform, runtime_config);
+            return node_embedding_status.ok;
+        }
+        catch (Exception)
+        {
+            return node_embedding_status.generic_error;
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
-    internal static unsafe void GetArgsCallbackAdapter(
-           nint cb_data, int argc, nint argv)
+    internal static unsafe void GetArgsCallbackAdapter(nint cb_data, int argc, nint argv)
     {
-        var callback = (GetArgsCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        callback(Utf8StringArray.ToStringArray(argv, argc));
+        try
+        {
+            var callback = (GetArgsCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            callback(Utf8StringArray.ToStringArray(argv, argc));
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe void PreloadCallbackAdapter(
-           nint cb_data,
-           node_embedding_runtime runtime,
-           napi_env env,
-           napi_value process,
-           napi_value require)
+        nint cb_data,
+        node_embedding_runtime runtime,
+        napi_env env,
+        napi_value process,
+        napi_value require)
     {
-        var callback = (PreloadCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        var embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime);
-        var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
-        callback(embeddingRuntime, new JSValue(process), new JSValue(require));
+        try
+        {
+            var callback = (PreloadCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            var embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            callback(embeddingRuntime, new JSValue(process), new JSValue(require));
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe napi_value StartExecutionCallbackAdapter(
-           nint cb_data,
-           node_embedding_runtime runtime,
-           napi_env env,
-           napi_value process,
-           napi_value require,
-           napi_value run_cjs)
+        nint cb_data,
+        node_embedding_runtime runtime,
+        napi_env env,
+        napi_value process,
+        napi_value require,
+        napi_value run_cjs)
     {
-        var callback = (StartExecutionCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        var embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime);
-        var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
-        return (napi_value)callback(
-            embeddingRuntime, new JSValue(process), new JSValue(require), new JSValue(run_cjs));
+        try
+        {
+            var callback = (StartExecutionCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            var embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            return (napi_value)callback(
+                embeddingRuntime, new JSValue(process), new JSValue(require), new JSValue(run_cjs));
+        }
+        catch (Exception)
+        {
+            return default;
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe void HandleResultCallbackAdapter(
-           nint cb_data,
-           node_embedding_runtime runtime,
-           napi_env env,
-           napi_value value)
+        nint cb_data,
+        node_embedding_runtime runtime,
+        napi_env env,
+        napi_value value)
     {
-        var callback = (HandleResultCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        var embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime);
-        var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
-        callback(embeddingRuntime, new JSValue(value));
+        try
+        {
+            var callback = (HandleResultCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            var embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            callback(embeddingRuntime, new JSValue(value));
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe napi_value InitializeModuleCallbackAdapter(
-           nint cb_data,
-           node_embedding_runtime runtime,
-           napi_env env,
-           nint module_name,
-           napi_value exports)
+        nint cb_data,
+        node_embedding_runtime runtime,
+        napi_env env,
+        nint module_name,
+        napi_value exports)
     {
-        var callback = (InitializeModuleCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        var embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime);
-        var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
-        return (napi_value)callback(
-            embeddingRuntime,
-            Utf8StringArray.PtrToStringUTF8((byte*)module_name),
-            new JSValue(exports));
+        try
+        {
+            var callback = (InitializeModuleCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            var embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            return (napi_value)callback(
+                embeddingRuntime,
+                Utf8StringArray.PtrToStringUTF8((byte*)module_name),
+                new JSValue(exports));
+        }
+        catch (Exception)
+        {
+            return default;
+        }
     }
 
 #if UNMANAGED_DELEGATES
@@ -242,32 +316,53 @@ public sealed class NodejsEmbedding
 #endif
     internal static unsafe void RunTaskCallbackAdapter(nint cb_data)
     {
-        var callback = (RunTaskCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        callback();
+        try
+        {
+            var callback = (RunTaskCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            callback();
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe void PostTaskCallbackAdapter(
-           nint cb_data,
-           node_embedding_run_task_functor run_task)
+        nint cb_data,
+        node_embedding_run_task_functor run_task)
     {
-        var callback = (PostTaskCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        callback(run_task);
+        try
+        {
+            var callback = (PostTaskCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            callback(run_task);
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 
 #if UNMANAGED_DELEGATES
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
 #endif
     internal static unsafe void RunNodeApiCallbackAdapter(
-           nint cb_data,
-           node_embedding_runtime runtime,
-           napi_env env)
+        nint cb_data,
+        node_embedding_runtime runtime,
+        napi_env env)
     {
-        var callback = (RunNodeApiCallback)GCHandle.FromIntPtr(cb_data).Target!;
-        var embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime);
-        var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
-        callback(embeddingRuntime);
+        try
+        {
+            var callback = (RunNodeApiCallback)GCHandle.FromIntPtr(cb_data).Target!;
+            var embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            callback(embeddingRuntime);
+        }
+        catch (Exception)
+        {
+            // TODO: Handle exception.
+        }
     }
 }

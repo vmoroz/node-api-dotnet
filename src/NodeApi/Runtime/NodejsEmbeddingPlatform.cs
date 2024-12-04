@@ -1,14 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-#if UNMANAGED_DELEGATES
-using System.Runtime.CompilerServices;
-#endif
-using System.Runtime.InteropServices;
-
 namespace Microsoft.JavaScript.NodeApi.Runtime;
 
+using System;
+using System.Runtime.InteropServices;
 using static JSRuntime;
 using static NodejsEmbedding;
 
@@ -29,9 +25,28 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 
     public class PlatformSettings
     {
-        public string[]? Args { get; set; }
         public node_embedding_platform_flags? PlatformFlags { get; set; }
+        public string[]? Args { get; set; }
         public HandleErrorCallback? OnError { get; set; }
+        public ConfigurePlatformCallback? ConfigurePlatform { get; set; }
+
+        public static unsafe implicit operator node_embedding_configure_platform_functor_ref(
+            PlatformSettings? settings)
+        {
+            var confgurePlatform = new ConfigurePlatformCallback((config) =>
+            {
+                if (settings?.PlatformFlags != null)
+                {
+                    JSRuntime.EmbeddingPlatformSetFlags(config, settings.PlatformFlags.Value)
+                        .ThrowIfFailed();
+                }
+                settings?.ConfigurePlatform?.Invoke(config);
+            });
+
+            return new node_embedding_configure_platform_functor_ref(
+                confgurePlatform,
+                new node_embedding_configure_platform_callback(s_configurePlatformCallback));
+        }
     }
 
     /// <summary>
@@ -44,16 +59,14 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     public static unsafe NodejsEmbeddingPlatform Initialize(
         string libnodePath, PlatformSettings? settings)
     {
-        if (string.IsNullOrEmpty(libnodePath)) throw new ArgumentNullException(nameof(libnodePath));
         if (Current != null)
         {
             throw new InvalidOperationException(
                 "Only one Node.js platform instance per process is allowed.");
         }
-        nint libnodeHandle = NativeLibrary.Load(libnodePath);
-        JSRuntime = new NodejsRuntime(libnodeHandle);
+        NodejsEmbedding.Initialize(libnodePath);
 
-        if (settings != null && settings.OnError != null)
+        if (settings?.OnError != null)
         {
             var handle_error_functor = new node_embedding_handle_error_functor
             {
@@ -66,42 +79,20 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 
         JSRuntime.EmbeddingSetApiVersion(EmbeddingApiVersion, NodeApiVersion).ThrowIfFailed();
 
-        ConfigurePlatformCallback configurePlatform = (config) =>
-         {
-             if (settings != null && settings.PlatformFlags != null)
-             {
-                 JSRuntime.EmbeddingPlatformSetFlags(config, settings.PlatformFlags.Value);
-             }
-             return node_embedding_status.ok;
-         };
-
-        using var configurePlatformFunctorRef = new node_embedding_configure_platform_functor_ref(
-            configurePlatform,
-            new node_embedding_configure_platform_callback(s_configurePlatformCallback));
-
+        using node_embedding_configure_platform_functor_ref configurePlatformFunctorRef =
+            settings ?? new PlatformSettings();
 
         JSRuntime.EmbeddingCreatePlatform(
-            settings?.Args, configurePlatformFunctorRef, out var platform).ThrowIfFailed();
+            settings?.Args, configurePlatformFunctorRef, out node_embedding_platform platform)
+            .ThrowIfFailed();
 
         Current = new NodejsEmbeddingPlatform(platform);
-
         return Current;
     }
 
-    private NodejsEmbeddingPlatform(node_embedding_platform platform)
+    internal NodejsEmbeddingPlatform(node_embedding_platform platform)
     {
         _platform = platform;
-    }
-
-    /// <summary>
-    /// Disposes the platform. After disposal, another platform instance may not be initialized
-    /// in the current process.
-    /// </summary>
-    public void Dispose()
-    {
-        if (IsDisposed) return;
-        IsDisposed = true;
-        JSRuntime?.EmbeddingDeletePlatform(_platform);
     }
 
     /// <summary>
@@ -114,7 +105,18 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     /// </summary>
     public static NodejsEmbeddingPlatform? Current { get; private set; }
 
-    public static JSRuntime? JSRuntime { get; private set; }
+    public static JSRuntime JSRuntime => NodejsEmbedding.JSRuntime;
+
+    /// <summary>
+    /// Disposes the platform. After disposal, another platform instance may not be initialized
+    /// in the current process.
+    /// </summary>
+    public void Dispose()
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+        JSRuntime.EmbeddingDeletePlatform(_platform);
+    }
 
     //    /// <summary>
     //    /// Creates a new Node.js environment with a dedicated main thread.
@@ -136,7 +138,6 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 
     public unsafe void GetParsedArgs(GetArgsCallback? getArgs, GetArgsCallback? getRuntimeArgs)
     {
-        if (JSRuntime == null) throw new InvalidOperationException("Platform not initialized.");
         if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
 
         using var getArgsFunctorRef = new node_embedding_get_args_functor_ref(
@@ -146,5 +147,23 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 
         JSRuntime.EmbeddingPlatformGetParsedArgs(
             _platform, getArgsFunctorRef, getRuntimeArgsFunctorRef).ThrowIfFailed();
+    }
+
+    public string[] GetParsedArgs()
+    {
+        if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
+
+        string[]? result = null;
+        GetParsedArgs((string[] args) => result = args, null);
+        return result ?? Array.Empty<string>();
+    }
+
+    public string[] GetRuntimeParsedArgs()
+    {
+        if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
+
+        string[]? result = null;
+        GetParsedArgs(null, (string[] args) => result = args);
+        return result ?? Array.Empty<string>();
     }
 }

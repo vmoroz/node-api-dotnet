@@ -35,6 +35,7 @@ public sealed class NodejsEmbeddingNodeApiScope : IDisposable
         if (IsDisposed) return;
         IsDisposed = true;
 
+        _valueScope.Dispose();
         NodejsEmbeddingRuntime.JSRuntime.EmbeddingCloseNodeApiScope(_runtime, _nodeApiScope)
             .ThrowIfFailed();
     }
