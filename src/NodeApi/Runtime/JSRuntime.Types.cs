@@ -650,9 +650,25 @@ public unsafe partial class JSRuntime
         public node_embedding_release_data_callback release;
     }
 
-    public struct node_embedding_run_node_api_functor_ref
+    public struct node_embedding_run_node_api_functor_ref : IDisposable
     {
         public nint data;
         public node_embedding_run_node_api_callback invoke;
+
+        public node_embedding_run_node_api_functor_ref(
+            object? functor, node_embedding_run_node_api_callback invoke)
+        {
+            data = (functor != null) ? (nint)GCHandle.Alloc(functor) : default;
+            this.invoke = (functor != null)
+                ? invoke
+                : new node_embedding_run_node_api_callback(0);
+        }
+
+        public void Dispose()
+        {
+            if (data == 0) return;
+            GCHandle.FromIntPtr(data).Free();
+            data = 0;
+        }
     }
 }

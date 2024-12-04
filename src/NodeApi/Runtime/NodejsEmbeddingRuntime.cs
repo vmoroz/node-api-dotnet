@@ -6,10 +6,13 @@ namespace Microsoft.JavaScript.NodeApi.Runtime;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.JavaScript.NodeApi.Interop;
 using static JSRuntime;
+
+using static NodejsEmbedding;
 
 /// <summary>
 /// A Node.js runtime environment with a dedicated main execution thread.
@@ -33,12 +36,15 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
     //public static implicit operator JSValueScope(NodejsEmbeddingRuntime runtime)
     //    => runtime._scope;
 
+    public static implicit operator node_embedding_runtime(NodejsEmbeddingRuntime runtime)
+        => runtime._runtime;
+
     public static NodejsEmbeddingRuntime FromHandle(node_embedding_runtime handle)
     {
         throw new NotImplementedException(); 
     }
 
-    public JSRuntime JSRuntime
+    public static JSRuntime JSRuntime
     {
         get
         {
@@ -417,5 +423,15 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
             throw new InvalidOperationException("The global gc() function was not found. " +
                 "Make sure the Node.js platform was initialized with the `--enable-gc` option.");
         }
+    }
+
+    public unsafe void RunNodeApi(RunNodeApiCallback runNodeApi)
+    {
+        if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingRuntime));
+
+        using var runNodeApiFunctorRef = new node_embedding_run_node_api_functor_ref(
+            runNodeApi, new node_embedding_run_node_api_callback(s_runNodeApiCallback));
+
+        JSRuntime.EmbeddingRunNodeApi(_runtime, runNodeApiFunctorRef).ThrowIfFailed();
     }
 }
