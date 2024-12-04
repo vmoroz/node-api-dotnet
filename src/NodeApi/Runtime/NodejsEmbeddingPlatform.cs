@@ -64,10 +64,7 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
             JSRuntime.EmbeddingOnError(handle_error_functor).ThrowIfFailed();
         }
 
-        JSRuntime.EmbeddingSetApiVersion(
-            1, // The intitial Node.js embedding API version
-            9) // Current Node-API version
-            .ThrowIfFailed();
+        JSRuntime.EmbeddingSetApiVersion(EmbeddingApiVersion, NodeApiVersion).ThrowIfFailed();
 
         ConfigurePlatformCallback configurePlatform = (config) =>
          {
@@ -77,23 +74,14 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
              }
              return node_embedding_status.ok;
          };
-        var configurePlatformFunctor = new node_embedding_configure_platform_functor_ref
-        {
-            data = (nint)GCHandle.Alloc(configurePlatform),
-            invoke = new node_embedding_configure_platform_callback(s_configurePlatformCallback),
-        };
 
-        node_embedding_platform platform;
-        try
-        {
-            JSRuntime.EmbeddingCreatePlatform(
-                settings?.Args, configurePlatformFunctor, out platform)
-                .ThrowIfFailed();
-        }
-        finally
-        {
-            GCHandle.FromIntPtr(configurePlatformFunctor.data).Free();
-        }
+        using var configurePlatformFunctorRef = new node_embedding_configure_platform_functor_ref(
+            configurePlatform,
+            new node_embedding_configure_platform_callback(s_configurePlatformCallback));
+
+
+        JSRuntime.EmbeddingCreatePlatform(
+            settings?.Args, configurePlatformFunctorRef, out var platform).ThrowIfFailed();
 
         Current = new NodejsEmbeddingPlatform(platform);
 
@@ -145,4 +133,18 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
 
     //        return new NodejsEnvironment(this, baseDir, mainScript);
     //    }
+
+    public unsafe void GetParsedArgs(GetArgsCallback? getArgs, GetArgsCallback? getRuntimeArgs)
+    {
+        if (JSRuntime == null) throw new InvalidOperationException("Platform not initialized.");
+        if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
+
+        using var getArgsFunctorRef = new node_embedding_get_args_functor_ref(
+            getArgs, new node_embedding_get_args_callback(s_getArgsCallback));
+        using var getRuntimeArgsFunctorRef = new node_embedding_get_args_functor_ref(
+            getRuntimeArgs, new node_embedding_get_args_callback(s_getArgsCallback));
+
+        JSRuntime.EmbeddingPlatformGetParsedArgs(
+            _platform, getArgsFunctorRef, getRuntimeArgsFunctorRef).ThrowIfFailed();
+    }
 }

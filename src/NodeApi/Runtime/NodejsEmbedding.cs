@@ -12,6 +12,9 @@ using static JSRuntime;
 
 public sealed class NodejsEmbedding
 {
+    public static readonly int EmbeddingApiVersion = 1;
+    public static readonly int NodeApiVersion = 9;
+
     public static JSRuntime JSRuntime
     {
         get
