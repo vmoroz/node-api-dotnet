@@ -19,25 +19,47 @@ namespace Microsoft.JavaScript.NodeApi.Test;
 
 public class NodejsEmbeddingTests
 {
+    private static string MainScript { get; } =
+        "globalThis.require = require('module').createRequire(process.execPath);\n";
+
     private static string LibnodePath { get; } = GetLibnodePath();
 
     // The Node.js platform may only be initialized once per process.
     internal static NodejsEmbeddingPlatform? NodejsPlatform { get; } =
         File.Exists(LibnodePath)
-            ? new(LibnodePath, new NodejsEmbeddingPlatformSettings {
-                Args = new[] { "node", "--expose-gc" } })
+            ? new(LibnodePath, new NodejsEmbeddingPlatformSettings
+            {
+                Args = new[] { "node", "--expose-gc" }
+            })
             : null;
 
     internal static NodejsEmbeddingThreadRuntime CreateNodejsEnvironment()
     {
         Skip.If(NodejsPlatform == null, "Node shared library not found at " + LibnodePath);
-        return NodejsPlatform.CreateThreadRuntime(Path.Combine(GetRepoRootDirectory(), "test"));
+        return NodejsPlatform.CreateThreadRuntime(
+            Path.Combine(GetRepoRootDirectory(), "test"),
+            new NodejsEmbeddingRuntimeSettings { MainScript = MainScript });
     }
 
     internal static void RunInNodejsEnvironment(Action action)
     {
         using NodejsEmbeddingThreadRuntime nodejs = CreateNodejsEnvironment();
         nodejs.SynchronizationContext.Run(action);
+    }
+
+    [SkippableFact]
+    public void LoadMainScriptNoThread()
+    {
+        Skip.If(NodejsPlatform == null, "Node shared library not found at " + LibnodePath);
+        using var runtime = new NodejsEmbeddingRuntime(NodejsPlatform,
+            new NodejsEmbeddingRuntimeSettings { MainScript = MainScript });
+        runtime.CompleteEventLoop();
+    }
+
+    [SkippableFact]
+    public void LoadMainScriptWithThread()
+    {
+        using var runtime = CreateNodejsEnvironment();
     }
 
     [SkippableFact]

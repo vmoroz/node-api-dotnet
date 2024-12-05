@@ -101,12 +101,11 @@ public sealed class NodejsEmbeddingPlatform : IDisposable
     /// <returns>A new <see cref="NodejsEmbeddingThreadRuntime" /> instance.</returns>
     public NodejsEmbeddingThreadRuntime CreateThreadRuntime(
         string? baseDir = null,
-        string? mainScript = null,
         NodejsEmbeddingRuntimeSettings? settings = null)
     {
         if (IsDisposed) throw new ObjectDisposedException(nameof(NodejsEmbeddingPlatform));
 
-        return new NodejsEmbeddingThreadRuntime(this, baseDir, mainScript, settings);
+        return new NodejsEmbeddingThreadRuntime(this, baseDir, settings);
     }
 
     public unsafe void GetParsedArgs(GetArgsCallback? getArgs, GetArgsCallback? getRuntimeArgs)

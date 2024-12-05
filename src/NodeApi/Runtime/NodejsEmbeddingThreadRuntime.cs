@@ -36,7 +36,6 @@ public sealed class NodejsEmbeddingThreadRuntime : IDisposable
     internal NodejsEmbeddingThreadRuntime(
         NodejsEmbeddingPlatform platform,
         string? baseDir,
-        string? mainScript,
         NodejsEmbeddingRuntimeSettings? settings)
     {
         JSValueScope scope = null!;
@@ -67,7 +66,15 @@ public sealed class NodejsEmbeddingThreadRuntime : IDisposable
             loadedEvent.Set();
 
             // Run the JS event loop until disposal unrefs the completion thread safe function.
-            runtime.RunEventLoop(node_embedding_event_loop_run_mode.default_mode);
+            try
+            {
+                runtime.CompleteEventLoop();
+                ExitCode = 0;
+            }
+            catch (Exception)
+            {
+                ExitCode = 1;
+            }
 
             syncContext.Dispose();
         });
@@ -201,7 +208,11 @@ public sealed class NodejsEmbeddingThreadRuntime : IDisposable
 
         // Unreffing the completion should complete the Node.js event loop
         // if it has nothing else to do.
-        _completion?.Unref();
+        if (_completion != null)
+        {
+            // The Unref must be called in the JS thread.
+            _completion.BlockingCall(() => _completion.Unref());
+        }
         _thread.Join();
 
         Debug.WriteLine($"Node.js environment exited with code: {ExitCode}");
