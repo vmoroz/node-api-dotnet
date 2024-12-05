@@ -153,11 +153,11 @@ public unsafe partial class NodejsRuntime
         out node_embedding_platform result)
     {
         using Utf8StringArray utf8Args = new(args);
-        nint argsPtr = utf8Args.Pin();
+        fixed (nint* argsPtr = &utf8Args.Pin())
         fixed (node_embedding_platform* result_ptr = &result)
         {
             return Import(ref node_embedding_create_platform)(
-                args.Length, argsPtr, configure_platform, (nint)result_ptr);
+                args.Length, (nint)argsPtr, configure_platform, (nint)result_ptr);
         }
     }
 
@@ -299,7 +299,7 @@ public unsafe partial class NodejsRuntime
         out node_embedding_node_api_scope node_api_scope,
         out napi_env env)
     {
-        fixed(node_embedding_node_api_scope* scopePtr = &node_api_scope)
+        fixed (node_embedding_node_api_scope* scopePtr = &node_api_scope)
         fixed (napi_env* envPtr = &env)
         {
             return Import(ref node_embedding_open_node_api_scope)(

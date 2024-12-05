@@ -228,9 +228,9 @@ public sealed class NodejsEmbedding
         try
         {
             var callback = (PreloadCallback)GCHandle.FromIntPtr(cb_data).Target!;
-            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime)
+            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.GetOrCreate(runtime)
                 ?? throw new InvalidOperationException("Embedding runtime is not found");
-            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            using var jsValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
             callback(embeddingRuntime, new JSValue(process), new JSValue(require));
         }
         catch (Exception)
@@ -253,9 +253,9 @@ public sealed class NodejsEmbedding
         try
         {
             var callback = (StartExecutionCallback)GCHandle.FromIntPtr(cb_data).Target!;
-            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime)
+            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.GetOrCreate(runtime)
                 ?? throw new InvalidOperationException("Embedding runtime is not found");
-            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            using var jsValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
             return (napi_value)callback(
                 embeddingRuntime, new JSValue(process), new JSValue(require), new JSValue(run_cjs));
         }
@@ -277,9 +277,9 @@ public sealed class NodejsEmbedding
         try
         {
             var callback = (HandleResultCallback)GCHandle.FromIntPtr(cb_data).Target!;
-            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime)
+            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.GetOrCreate(runtime)
                 ?? throw new InvalidOperationException("Embedding runtime is not found");
-            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            using var jsValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
             callback(embeddingRuntime, new JSValue(value));
         }
         catch (Exception)
@@ -301,9 +301,9 @@ public sealed class NodejsEmbedding
         try
         {
             var callback = (InitializeModuleCallback)GCHandle.FromIntPtr(cb_data).Target!;
-            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime)
+            NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.GetOrCreate(runtime)
                 ?? throw new InvalidOperationException("Embedding runtime is not found");
-            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            using var jsValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
             return (napi_value)callback(
                 embeddingRuntime,
                 Utf8StringArray.PtrToStringUTF8((byte*)module_name),
@@ -362,7 +362,7 @@ public sealed class NodejsEmbedding
             var callback = (RunNodeApiCallback)GCHandle.FromIntPtr(cb_data).Target!;
             NodejsEmbeddingRuntime embeddingRuntime = NodejsEmbeddingRuntime.FromHandle(runtime)
                 ?? throw new InvalidOperationException("Embedding runtime is not found");
-            var JSValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
+            using var jsValueScope = new JSValueScope(JSValueScopeType.Root, env, JSRuntime);
             callback(embeddingRuntime);
         }
         catch (Exception)

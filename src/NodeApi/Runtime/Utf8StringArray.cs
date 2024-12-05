@@ -4,9 +4,11 @@ using System.Text;
 
 internal struct Utf8StringArray : IDisposable
 {
+    // Use one contiguous buffer for all UTF-8 strings.
     private byte[] _stringBuffer;
+    private GCHandle _pinnedStringBuffer;
 
-    public Utf8StringArray(ReadOnlySpan<string> strings)
+    public unsafe Utf8StringArray(ReadOnlySpan<string> strings)
     {
         int byteLength = 0;
         for (int i = 0; i < strings.Length; i++)
@@ -15,8 +17,8 @@ internal struct Utf8StringArray : IDisposable
         }
 
 #if NETFRAMEWORK || NETSTANDARD
-        // Avoid a dependency on System.Buffers with .NET Framwork.
-        // It is available as a nuget package, but might not be installed in the application.
+        // Avoid a dependency on System.Buffers with .NET Framework.
+        // It is available as a Nuget package, but might not be installed in the application.
         // In this case the buffer is not actually pooled.
 
         Utf8Strings = new nint[strings.Length];
@@ -26,32 +28,36 @@ internal struct Utf8StringArray : IDisposable
         _stringBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(byteLength);
 #endif
 
+        // Pin the string buffer
+        _pinnedStringBuffer = GCHandle.Alloc(_stringBuffer, GCHandleType.Pinned);
+        nint stringBufferPtr = _pinnedStringBuffer.AddrOfPinnedObject();
         int offset = 0;
         for (int i = 0; i < strings.Length; i++)
         {
-            offset = Encoding.UTF8.GetBytes(
-                strings[0], 0, strings[0].Length, _stringBuffer, offset);
-            _stringBuffer[0] = 0; // Null-terminate the string.
+            fixed (char* src = strings[i])
+            {
+                Utf8Strings[i] = stringBufferPtr + offset;
+                offset += Encoding.UTF8.GetBytes(
+                    src, strings[i].Length, (byte*)(stringBufferPtr + offset), byteLength - offset)
+                    + 1; // +1 for the string Null-terminator.
+            }
         }
     }
-
-#if NETFRAMEWORK || NETSTANDARD
-
-    public readonly void Dispose() { }
-
-#else
 
     public void Dispose()
     {
         if (!Disposed)
         {
             Disposed = true;
+            _pinnedStringBuffer.Free();
+
+#if !(NETFRAMEWORK || NETSTANDARD)
             System.Buffers.ArrayPool<nint>.Shared.Return(Utf8Strings);
             System.Buffers.ArrayPool<byte>.Shared.Return(_stringBuffer);
+#endif
         }
     }
 
-#endif
 
     public readonly nint[] Utf8Strings { get; }
 

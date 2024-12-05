@@ -59,6 +59,16 @@ public sealed class NodejsEmbeddingRuntime : IDisposable
         }
     }
 
+    public static NodejsEmbeddingRuntime GetOrCreate(node_embedding_runtime runtime)
+    {
+        NodejsEmbeddingRuntime? embeddingRuntime = FromHandle(runtime);
+        if (embeddingRuntime == null)
+        {
+            embeddingRuntime = new NodejsEmbeddingRuntime(runtime);
+        }
+        return embeddingRuntime;
+    }
+
     public static void Run(NodejsEmbeddingPlatform platform,
         NodejsEmbeddingRuntimeSettings? settings = null)
     {
